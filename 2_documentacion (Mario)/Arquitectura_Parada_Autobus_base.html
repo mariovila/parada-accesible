@@ -1,0 +1,794 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Arquitectura Parada–Autobús</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: una columna; primero contexto, casos de uso y requisitos; después tres vistas apiladas (estructura, secuencia, estados), contrato de topics y preguntas abiertas al final */
+:root {
+  --bg: #f6f8f9;
+  --surface: #ffffff;
+  --fg: #16232b;
+  --muted: #5b6b74;
+  --line: #c9d3d8;
+  --accent: #0f7c86;       /* nube / mensajería */
+  --accent-soft: #e2f1f2;
+  --warn: #a2580c;          /* sin definir */
+  --font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171c; --surface: #16222a; --fg: #e3ebee; --muted: #93a5ae;
+    --line: #2f3f48; --accent: #4cc3cc; --accent-soft: #143238; --warn: #e3a55c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171c; --surface: #16222a; --fg: #e3ebee; --muted: #93a5ae;
+  --line: #2f3f48; --accent: #4cc3cc; --accent-soft: #143238; --warn: #e3a55c;
+  color-scheme: dark;
+}
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.55;
+}
+.wrap {
+  max-width: 1000px; margin: 0 auto;
+  padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 48px;
+}
+header { display: flex; flex-direction: column; gap: 10px; }
+.eyebrow {
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--accent);
+}
+h1 { font-family: var(--font-display); font-size: 34px; line-height: 1.15; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--font-display); font-size: 23px; margin: 0; text-wrap: balance; }
+h3 { font-family: var(--font-display); font-size: 17px; margin: 0; }
+.lede { color: var(--muted); max-width: 65ch; margin: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13px; color: var(--muted); align-items: center; }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.sw { width: 26px; height: 0; border-top: 2px solid var(--fg); }
+.sw.prop { border-top: 2px dashed var(--warn); }
+.sw.ble { border-top: 3px dotted var(--fg); }
+.sw.acc { width: 16px; height: 12px; border: 2px solid var(--accent); background: var(--accent-soft); border-radius: 3px; }
+
+nav { display: flex; flex-wrap: wrap; gap: 8px; }
+nav a {
+  font-size: 13.5px; text-decoration: none; color: var(--fg);
+  border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; background: var(--surface);
+}
+nav a:hover, nav a:focus-visible { border-color: var(--accent); color: var(--accent); outline: none; }
+
+section { display: flex; flex-direction: column; gap: 14px; scroll-margin-top: 16px; min-width: 0; }
+.view-head { display: flex; flex-direction: column; gap: 4px; }
+.view-tag { font-family: var(--font-mono); font-size: 12px; color: var(--accent); letter-spacing: .06em; text-transform: uppercase; }
+.view-q { color: var(--muted); margin: 0; }
+.note-p { color: var(--muted); font-size: 13.5px; margin: 0; max-width: 75ch; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.card p { margin: 0; }
+.steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; max-width: 75ch; }
+.steps li::marker { color: var(--accent); font-family: var(--font-mono); font-size: 13px; }
+.pill {
+  display: inline-block; font-family: var(--font-mono); font-size: 10.5px; font-weight: 500;
+  letter-spacing: .05em; text-transform: uppercase; color: var(--accent);
+  border: 1px solid var(--accent); border-radius: 999px; padding: 0 6px; margin-left: 6px; vertical-align: 1px;
+}
+
+figure { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.svg-scroll { overflow-x: auto; }
+svg { display: block; width: 100%; min-width: 640px; height: auto; color: var(--fg); }
+figcaption { color: var(--muted); font-size: 13.5px; margin-top: 10px; max-width: 75ch; }
+
+svg .box { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+svg .container { fill: var(--bg); stroke: currentColor; stroke-width: 1.5; }
+svg .group { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
+svg .cloud { fill: var(--bg); stroke: var(--accent); stroke-width: 1.5; }
+svg .broker { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
+svg .orq { fill: var(--surface); stroke: var(--accent); stroke-width: 2; }
+svg .dashed { fill: none; stroke: var(--warn); stroke-width: 1.5; stroke-dasharray: 5 4; }
+svg .flow { stroke: currentColor; stroke-width: 1.8; fill: none; }
+svg .flow-ble { stroke: currentColor; stroke-width: 1.8; fill: none; stroke-dasharray: 2 4; }
+svg .flow-acc { stroke: var(--accent); stroke-width: 1.8; fill: none; }
+svg .lifeline { stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 4 5; }
+svg .t { fill: currentColor; font-family: var(--font-body); font-size: 13px; }
+svg .t-h { fill: currentColor; font-family: var(--font-display); font-size: 17px; font-weight: 600; }
+svg .t-hs { fill: currentColor; font-family: var(--font-display); font-size: 15px; font-weight: 600; }
+svg .t-m { fill: var(--muted); font-family: var(--font-mono); font-size: 11.5px; }
+svg .t-acc { fill: var(--accent); font-family: var(--font-mono); font-size: 11.5px; font-weight: 500; }
+svg .t-warn { fill: var(--warn); font-family: var(--font-body); font-size: 12px; }
+svg .t-lbl { fill: currentColor; font-family: var(--font-body); font-size: 12.5px; font-weight: 600; }
+svg .dot { fill: currentColor; }
+svg .end { fill: none; stroke: currentColor; stroke-width: 1.8; }
+svg .state { fill: var(--surface); stroke: currentColor; stroke-width: 1.8; }
+svg .state-acc { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
+svg .note { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.2; }
+svg .band { fill: var(--accent-soft); }
+svg .miss { fill: var(--surface); stroke: currentColor; stroke-width: 1.8; }
+
+.tbl-scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 560px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: .05em; text-transform: uppercase; }
+td:first-child { font-weight: 600; white-space: nowrap; }
+td.c-num { font-family: var(--font-mono); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.c-id { font-family: var(--font-mono); font-size: 13px; font-weight: 500; color: var(--accent); }
+td.c-name { font-weight: 600; }
+.dir { font-size: 13px; color: var(--muted); white-space: nowrap; }
+
+.payloads { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 14px; }
+.payloads > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.payloads .topic { font-family: var(--font-mono); font-size: 12.5px; color: var(--accent); }
+pre {
+  margin: 0; overflow-x: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  padding: 10px 12px; font-family: var(--font-mono); font-size: 13px; line-height: 1.6;
+}
+.k { color: var(--accent); }
+.c { color: var(--muted); }
+
+.rules { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; max-width: 75ch; }
+.rules li::marker { color: var(--accent); }
+.rules a, figcaption a { color: var(--accent); }
+.qs { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 10px; max-width: 75ch; }
+.qs li::marker { color: var(--warn); }
+strong { font-weight: 600; }
+code { font-family: var(--font-mono); font-size: 13px; }
+
+@media (max-width: 520px) { h1 { font-size: 27px; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Diseño base · MQTT con Node-RED + baliza BLE de usuario</span>
+    <h1>Arquitectura Parada–Autobús</h1>
+    <p class="lede">Versión mínima del sistema: una parada, un usuario y un autobús avisado por solicitud. Usa todos los sensores y actuadores del proyecto, pero solo cubre el recorrido principal. Lo que se ha dejado fuera está al final como ampliaciones, cada una con lo que habría que añadir.</p>
+    <div class="legend">
+      <span><i class="sw"></i>MQTT</span>
+      <span><i class="sw ble"></i>BLE, no pasa por el broker</span>
+      <span><i class="sw acc"></i>nube (broker y Node-RED)</span>
+    </div>
+    <nav aria-label="Secciones">
+      <a href="#contexto">Contexto</a>
+      <a href="#alcance">Alcance</a>
+      <a href="#supuestos">Supuestos</a>
+      <a href="#casos">Casos de uso</a>
+      <a href="#requisitos">Requisitos</a>
+      <a href="#kit">Sensores y actuadores</a>
+      <a href="#arquitectura">Arquitectura</a>
+      <a href="#baliza">Baliza BLE</a>
+      <a href="#secuencia">Secuencia</a>
+      <a href="#estados">Estados</a>
+      <a href="#topics">Topics</a>
+      <a href="#implementacion">Implementación</a>
+      <a href="#ampliaciones">Ampliaciones</a>
+      <a href="#preguntas">Preguntas abiertas</a>
+    </nav>
+  </header>
+
+  <section id="contexto">
+    <div class="view-head">
+      <span class="view-tag">Punto de partida</span>
+      <h2>Contexto</h2>
+      <p class="view-q">¿Qué problema resuelve y para quién?</p>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <h3>El problema</h3>
+        <p>Una persona ciega no sabe qué autobús está llegando ni dónde queda la puerta. Una persona en silla de ruedas depende de que el conductor la vea a tiempo y despliegue la rampa.</p>
+      </div>
+      <div class="card">
+        <h3>La idea</h3>
+        <p>El usuario lleva un dispositivo pequeño en el bastón o en la silla. La parada lo detecta, le dice qué autobuses están al llegar y avisa al que el usuario elija, que llega sabiendo qué ayuda tiene que dar.</p>
+      </div>
+    </div>
+
+    <h3>El recorrido, paso a paso</h3>
+    <ol class="steps">
+      <li>El usuario llega a la parada. Su dispositivo le indica a la parada qué tipo de asistencia necesita.</li>
+      <li>La parada dice por voz qué autobuses pasarán en los próximos 20 minutos. El usuario gira un mando para pasar de una línea a otra y pulsa cuando oye la suya.</li>
+      <li>Si llueve, nieva o ha llovido hace poco, la parada avisa además de que el suelo puede estar resbaladizo. El dato sale del servicio de Internet Open Weather Map.</li>
+      <li>El sistema avisa al siguiente autobús de esa línea. El conductor ve en su pantalla que hay alguien esperando y qué ayuda necesita.</li>
+      <li>El autobús se detiene en la parada. La parada lo dice por voz, y en el autobús suena el zumbador de la puerta (asistencia visual) o se despliega la rampa (movilidad).</li>
+      <li>El conductor pulsa un botón cuando la persona ha subido. El zumbador se apaga, la rampa se recoge y la solicitud se cierra.</li>
+      <li>Si el conductor no pulsa, la solicitud se cierra igual cuando el autobús se va.</li>
+    </ol>
+
+    <h3>Tipos de asistencia</h3>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>Tipo</th><th>Dónde va el dispositivo</th><th>Qué hace la parada</th><th>Qué hace el autobús</th></tr></thead>
+        <tbody>
+          <tr><td><code>visual</code></td><td>Bastón</td><td>Anuncia los autobuses y avisa por voz</td><td>Suena el zumbador de la puerta</td></tr>
+          <tr><td><code>movilidad</code></td><td>Silla de ruedas</td><td>Anuncia los autobuses y avisa por voz</td><td>Despliega la rampa</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="alcance">
+    <div class="view-head">
+      <span class="view-tag">Punto de partida</span>
+      <h2>Alcance de la base</h2>
+      <p class="view-q">¿Qué entra en esta versión y qué se deja para después?</p>
+    </div>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>Aspecto</th><th>En la base</th><th>Se deja para después</th></tr></thead>
+        <tbody>
+          <tr><td>Autobuses avisados</td><td>Uno por solicitud: el siguiente de la línea elegida</td><td>Avisar a varios y pasar al siguiente si el primero no recoge</td></tr>
+          <tr><td>Cuándo se avisa</td><td>En cuanto el usuario elige</td><td>Esperar a que el autobús esté a menos de 10 minutos</td></tr>
+          <tr><td>Avisos por voz</td><td>Lista de autobuses, línea al girar, «avisada» y «ha llegado»</td><td>Aviso de 1 minuto para cualquier autobús</td></tr>
+          <tr><td>Cierre</td><td>Pulsador del conductor, o el autobús se va</td><td>Decidir si la persona subió mirando la baliza</td></tr>
+          <tr><td>Cancelación</td><td>No hay: la solicitud siempre termina con el autobús</td><td>Cancelar si el usuario se va antes, caducidad, cambio de línea</td></tr>
+          <tr><td>Fallos</td><td>No se tratan: los nodos no se caen</td><td>LWT, estado de cada nodo, sesión persistente</td></tr>
+          <tr><td>Tamaño</td><td>Una parada, un usuario, un autobús</td><td>Más autobuses y varias paradas por autobús</td></tr>
+          <tr><td>Mensajes</td><td>7 topics, 3 avisos y 3 órdenes</td><td>10 topics, 6 avisos y 4 órdenes</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note-p">Los sensores y actuadores son los mismos en la base y en la versión completa. Lo que cambia es cuánta lógica hay en la nube.</p>
+  </section>
+
+  <section id="supuestos">
+    <div class="view-head">
+      <span class="view-tag">Punto de partida</span>
+      <h2>Supuestos</h2>
+      <p class="view-q">¿Qué se da por hecho?</p>
+    </div>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>Id</th><th>Supuesto</th><th>Qué simplifica</th></tr></thead>
+        <tbody>
+          <tr><td class="c-id">S1</td><td>Los autobuses se retrasan o se adelantan como máximo 30 segundos</td><td>La llegada se conoce por los horarios, sin GPS. El ultrasonidos solo la confirma</td></tr>
+          <tr><td class="c-id">S2</td><td>En la parada solo se detienen autobuses, y entre dos hay más de 1 minuto</td><td>Un vehículo detenido dentro del margen es el autobús esperado</td></tr>
+          <tr><td class="c-id">S3</td><td>Los horarios son escenarios de prueba precargados</td><td>No hay que conectarse a horarios reales</td></tr>
+          <tr><td class="c-id">S4</td><td>En la parada solo hay a la vez una persona que necesita asistencia</td><td>Una baliza y una solicitud. El mando siempre es de ese usuario</td></tr>
+          <tr><td class="c-id">S5</td><td>La baliza está siempre activa y toda baliza recibida es de alguien que espera</td><td>El dispositivo no lleva botón y no hace falta umbral de señal</td></tr>
+          <tr><td class="c-id">S6</td><td>El ultrasonidos no falla y los nodos no se caen</td><td>No hay que tratar autobuses no detectados ni desconexiones</td></tr>
+          <tr><td class="c-id">S7</td><td>Ningún usuario es sordo</td><td>Todos los avisos de la parada se dan por voz</td></tr>
+          <tr><td class="c-id">S8</td><td>El usuario espera a su autobús y el autobús lo recoge</td><td>No hay que cancelar solicitudes. Cuando el autobús se va, la solicitud se da por terminada</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="casos">
+    <div class="view-head">
+      <span class="view-tag">Punto de partida</span>
+      <h2>Casos de uso</h2>
+      <p class="view-q">¿Quién usa el sistema y para qué?</p>
+    </div>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>Id</th><th>Caso de uso</th><th>Actor</th><th>Qué lo dispara</th><th>Resultado</th></tr></thead>
+        <tbody>
+          <tr><td class="c-id">CU1</td><td class="c-name">Anunciarse y oír qué autobuses vienen</td><td>Usuario</td><td>La parada recibe su baliza</td><td>La parada conoce el tipo de asistencia y dice las líneas de los próximos 20 min</td></tr>
+          <tr><td class="c-id">CU2</td><td class="c-name">Solicitar una línea</td><td>Usuario</td><td>Gira el mando (la voz repite cada línea) y pulsa</td><td>Se avisa al siguiente autobús de esa línea y la parada lo confirma por voz</td></tr>
+          <tr><td class="c-id">CU3</td><td class="c-name">Saber que hay alguien esperando</td><td>Conductor</td><td>Llega una asignación a su autobús</td><td>El LCD muestra parada, línea y tipo de asistencia</td></tr>
+          <tr><td class="c-id">CU4</td><td class="c-name">Recibir la ayuda al llegar el autobús</td><td>Usuario</td><td>El autobús avisado se detiene en la parada</td><td>La parada dice que ha llegado. Suena el zumbador o se despliega la rampa</td></tr>
+          <tr><td class="c-id">CU5</td><td class="c-name">Cerrar la solicitud</td><td>Conductor</td><td>Pulsa el botón. Si no pulsa, cuando el autobús se va</td><td>Zumbador apagado, rampa recogida y LCD en blanco</td></tr>
+          <tr><td class="c-id">CU6</td><td class="c-name">Saber que el suelo está mojado</td><td>Usuario</td><td>Está en la parada y llueve, nieva, hay tormenta o ha llovido hace poco</td><td>La parada lo avisa por voz, una vez por usuario</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="requisitos">
+    <div class="view-head">
+      <span class="view-tag">Punto de partida</span>
+      <h2>Requisitos</h2>
+      <p class="view-q">¿Qué tiene que cumplir y qué pieza lo cubre?</p>
+    </div>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>Id</th><th>Requisito</th><th>Se cubre con</th><th>Casos</th></tr></thead>
+        <tbody>
+          <tr><td class="c-id">RF1</td><td>La parada detecta al usuario sin que toque nada y conoce su tipo de asistencia</td><td>Baliza BLE, escáner</td><td class="c-num">CU1</td></tr>
+          <tr><td class="c-id">RF2</td><td>Al detectarlo, la parada dice por voz los autobuses de los próximos 20 min</td><td>Horarios, <code>parada/{p}/proximos</code>, altavoz</td><td class="c-num">CU1</td></tr>
+          <tr><td class="c-id">RF3</td><td>El usuario elige línea sin usar la vista</td><td>Rotary encoder, altavoz</td><td class="c-num">CU2</td></tr>
+          <tr><td class="c-id">RF4</td><td>El sistema avisa al siguiente autobús de la línea elegida</td><td>Horarios, Node-RED</td><td class="c-num">CU2</td></tr>
+          <tr><td class="c-id">RF5</td><td>El conductor ve la solicitud y el tipo de asistencia en 8x2 caracteres</td><td>LCD, <code>autobus/{b}/asistencia</code></td><td class="c-num">CU3</td></tr>
+          <tr><td class="c-id">RF6</td><td>El sistema solo actúa con doble verificación: al autobús avisado le toca llegar según los horarios y el ultrasonidos ve un vehículo detenido</td><td>Horarios y ultrasonidos, cruzados en Node-RED</td><td class="c-num">CU4</td></tr>
+          <tr><td class="c-id">RF7</td><td>Con asistencia visual suena el zumbador. Con movilidad se despliega la rampa</td><td><code>autobus/{b}/orden</code>, zumbador, servo</td><td class="c-num">CU4</td></tr>
+          <tr><td class="c-id">RF8</td><td>La solicitud se cierra con el pulsador del conductor o cuando el autobús se va. La rampa nunca queda desplegada con el autobús en marcha</td><td>Pulsador, ultrasonidos, <code>orden {fin}</code></td><td class="c-num">CU5</td></tr>
+          <tr><td class="c-id">RF9</td><td>La parada avisa por voz si el suelo puede estar mojado o helado</td><td>Open Weather Map (tiempo actual de Vigo), altavoz</td><td class="c-num">CU6</td></tr>
+          <tr><td class="c-id">RNF1</td><td>Parada y autobús no se conocen: todo pasa por el broker</td><td>MQTT, lógica en Node-RED</td><td class="c-num">todos</td></tr>
+          <tr><td class="c-id">RNF2</td><td>Ni la baliza ni el autobús manejan datos personales</td><td>Formato de baliza, payloads</td><td class="c-num">CU1, CU3</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="kit">
+    <div class="view-head">
+      <span class="view-tag">Punto de partida</span>
+      <h2>Sensores y actuadores</h2>
+      <p class="view-q">Tres sensores y cuatro actuadores. Todos salen del kit Keyestudio 48 en 1 menos el altavoz. Son los mismos que en la versión completa.</p>
+    </div>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>Tipo</th><th>Componente</th><th>N.º de kit</th><th>Nodo</th><th>Para qué</th><th>Cubre</th></tr></thead>
+        <tbody>
+          <tr><td>Sensor 1</td><td>Rotary Encoder Module</td><td class="c-num">37</td><td>Parada</td><td>El usuario recorre las líneas y pulsa para elegir</td><td class="c-num">CU2</td></tr>
+          <tr><td>Sensor 2</td><td>HC-SR04 Ultrasonic Sensor</td><td class="c-num">46</td><td>Parada</td><td>Mide la distancia: detecta cuándo un vehículo se detiene y cuándo se va</td><td class="c-num">CU4, CU5</td></tr>
+          <tr><td>Sensor 3</td><td>Digital Push Button Module</td><td class="c-num">7</td><td>Autobús</td><td>El conductor confirma que la persona ha subido</td><td class="c-num">CU5</td></tr>
+          <tr><td>Actuador 1</td><td>0802 LCD Module</td><td class="c-num">47</td><td>Autobús</td><td>«P101 C15» arriba y «VISUAL» o «RAMPA» abajo</td><td class="c-num">CU3</td></tr>
+          <tr><td>Actuador 2</td><td>Active Buzzer Module</td><td class="c-num">5</td><td>Autobús</td><td>Suena en la puerta para guiar al usuario con bastón</td><td class="c-num">CU4</td></tr>
+          <tr><td>Actuador 3</td><td>9G Servo Motor</td><td class="c-num">45</td><td>Autobús</td><td>Despliega y recoge la rampa</td><td class="c-num">CU4, CU5</td></tr>
+          <tr><td>Actuador 4</td><td>Altavoz (no es del kit)</td><td class="c-num">externo</td><td>Parada</td><td>Dice los autobuses, cada línea al girar y los avisos, incluido el de suelo mojado</td><td class="c-num">CU1, CU2, CU4, CU6</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note-p">Controladores: una Raspberry Pi en la parada y dos ESP-32 (autobús y dispositivo de usuario). El HC-SR04 devuelve el eco a 5 V y la Raspberry trabaja a 3,3 V: hace falta un divisor de tensión en la línea ECHO.</p>
+  </section>
+
+  <section id="arquitectura">
+    <div class="view-head">
+      <span class="view-tag">Vista 1 · Estructura</span>
+      <h2>Arquitectura</h2>
+      <p class="view-q">¿Qué hay y cómo se conecta? Por capas: nodos IoT, gateways, Internet y nube, más un servicio externo que da el tiempo.</p>
+    </div>
+    <figure>
+      <div class="svg-scroll">
+      <svg viewBox="0 0 960 750" role="img" aria-label="Arquitectura por capas. Abajo, la capa de nodos IoT: el dispositivo de usuario, los sensores y el altavoz de la parada, y el ESP-32 del autobús con su pantalla, zumbador, servo y pulsador. Encima, dos gateways: el de la parada, que es la Raspberry Pi y recibe la baliza BLE, y el del autobús, que es un router Wi-Fi. Los dos salen a Internet y llegan a la nube, donde están el broker MQTT y Node-RED. A la nube se conectan además los horarios precargados y un usuario remoto, el operador de pruebas, que usa un dashboard de Node-RED. A Internet se conecta también Open Weather Map, una API de terceros que da por HTTP el tiempo actual de Vigo. Parada y autobús nunca hablan entre sí.">
+        <defs>
+          <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+          </marker>
+          <marker id="a1a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
+          </marker>
+        </defs>
+
+        <!-- ===== Nube ===== -->
+        <rect class="cloud" x="270" y="12" width="420" height="204" rx="12"/>
+        <text class="t-m" x="288" y="34">NUBE</text>
+        <rect class="orq" x="380" y="30" width="200" height="62" rx="8"/>
+        <text class="t-h" x="480" y="58" text-anchor="middle">Node-RED</text>
+        <text class="t-m" x="480" y="78" text-anchor="middle">software de gestión</text>
+        <line class="flow-acc" x1="455" y1="94" x2="455" y2="128" marker-end="url(#a1a)"/>
+        <line class="flow-acc" x1="505" y1="128" x2="505" y2="94" marker-end="url(#a1a)"/>
+        <text class="t-m" x="520" y="116">MQTT</text>
+        <rect class="broker" x="300" y="132" width="360" height="70" rx="10"/>
+        <text class="t-h" x="480" y="162" text-anchor="middle">Broker MQTT</text>
+        <text class="t-acc" x="480" y="186" text-anchor="middle">servicios IoT · test.mosquitto.org</text>
+
+        <!-- usuario remoto -->
+        <rect class="box" x="30" y="40" width="188" height="78" rx="8"/>
+        <text class="t" x="124" y="66" text-anchor="middle">Usuario remoto</text>
+        <text class="t-m" x="124" y="84" text-anchor="middle">operador de pruebas</text>
+        <text class="t-acc" x="124" y="104" text-anchor="middle">dashboard de Node-RED</text>
+        <line class="flow" x1="222" y1="79" x2="266" y2="79" marker-start="url(#a1)" marker-end="url(#a1)"/>
+
+        <!-- horarios -->
+        <rect class="orq" x="730" y="40" width="200" height="78" rx="8"/>
+        <text class="t-h" x="830" y="72" text-anchor="middle">Horarios</text>
+        <text class="t-m" x="830" y="94" text-anchor="middle">escenarios precargados</text>
+        <line class="flow-acc" x1="726" y1="79" x2="694" y2="79" marker-end="url(#a1a)"/>
+
+        <!-- ===== Internet ===== -->
+        <line class="flow" x1="480" y1="220" x2="480" y2="262" marker-start="url(#a1)" marker-end="url(#a1)"/>
+        <rect class="box" x="410" y="266" width="140" height="40" rx="20"/>
+        <text class="t" x="480" y="291" text-anchor="middle">Internet</text>
+        <line class="flow" x1="428" y1="309" x2="304" y2="339" marker-start="url(#a1)" marker-end="url(#a1)"/>
+        <line class="flow" x1="532" y1="309" x2="656" y2="339" marker-start="url(#a1)" marker-end="url(#a1)"/>
+        <text class="t-m" x="352" y="318" text-anchor="end">MQTT</text>
+        <text class="t-m" x="608" y="318">MQTT</text>
+
+        <!-- API de terceros -->
+        <rect class="box" x="30" y="246" width="188" height="78" rx="8"/>
+        <text class="t" x="124" y="272" text-anchor="middle">Open Weather Map</text>
+        <text class="t-m" x="124" y="290" text-anchor="middle">API de terceros</text>
+        <text class="t-m" x="124" y="308" text-anchor="middle">tiempo actual de Vigo</text>
+        <line class="flow" x1="222" y1="285" x2="406" y2="285" marker-start="url(#a1)" marker-end="url(#a1)"/>
+        <text class="t-m" x="314" y="276" text-anchor="middle">HTTP</text>
+
+        <!-- ===== Gateways ===== -->
+        <rect class="container" x="140" y="342" width="240" height="76" rx="12"/>
+        <text class="t-h" x="260" y="369" text-anchor="middle">Gateway de parada</text>
+        <text class="t-m" x="260" y="389" text-anchor="middle">Raspberry Pi · id {p}</text>
+        <text class="t-m" x="260" y="405" text-anchor="middle">subida: Wi-Fi, Ethernet o 4G</text>
+
+        <rect class="container" x="590" y="342" width="240" height="76" rx="12"/>
+        <text class="t-h" x="710" y="369" text-anchor="middle">Gateway de autobús</text>
+        <text class="t-m" x="710" y="389" text-anchor="middle">router Wi-Fi</text>
+        <text class="t-m" x="710" y="405" text-anchor="middle">subida: Wi-Fi o 4G</text>
+
+        <!-- enlaces gateway ↔ nodos -->
+        <line class="flow-ble" x1="128" y1="548" x2="176" y2="424" marker-end="url(#a1)"/>
+        <text class="t-lbl" x="140" y="452" text-anchor="end">baliza BLE</text>
+        <text class="t-m" x="140" y="468" text-anchor="end">cada 10 s</text>
+        <line class="flow" x1="345" y1="422" x2="345" y2="494" marker-start="url(#a1)" marker-end="url(#a1)"/>
+        <text class="t-lbl" x="357" y="452">cable</text>
+        <text class="t-m" x="357" y="468">GPIO y audio</text>
+        <line class="flow" x1="710" y1="422" x2="710" y2="494" marker-start="url(#a1)" marker-end="url(#a1)"/>
+        <text class="t-lbl" x="722" y="452">Wi-Fi</text>
+        <text class="t-m" x="722" y="468">MQTT</text>
+
+        <!-- ===== Capa de nodos IoT ===== -->
+        <rect x="20" y="482" width="920" height="256" rx="12" fill="none" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="2 5"/>
+        <text class="t-m" x="36" y="724">CAPA DE NODOS IoT</text>
+
+        <!-- dispositivo de usuario -->
+        <rect class="box" x="40" y="550" width="176" height="66" rx="6"/>
+        <text class="t" x="128" y="573" text-anchor="middle">Dispositivo de usuario</text>
+        <text class="t-m" x="128" y="590" text-anchor="middle">ESP-32 · bastón o silla</text>
+        <text class="t-m" x="128" y="605" text-anchor="middle">id {d}, p. ej. D07</text>
+
+        <!-- parada: lo que cuelga de la Raspberry -->
+        <rect class="group" x="230" y="498" width="230" height="226" rx="10"/>
+        <text class="t-hs" x="246" y="522">Parada</text>
+        <text class="t-m" x="246" y="538">conectado a la Raspberry</text>
+        <rect class="box" x="246" y="550" width="198" height="46" rx="6"/>
+        <text class="t" x="345" y="571" text-anchor="middle">Rotary encoder</text>
+        <text class="t-acc" x="345" y="587" text-anchor="middle">sensor · kit 37</text>
+        <rect class="box" x="246" y="606" width="198" height="46" rx="6"/>
+        <text class="t" x="345" y="627" text-anchor="middle">Ultrasonidos</text>
+        <text class="t-acc" x="345" y="643" text-anchor="middle">sensor · kit 46</text>
+        <rect class="box" x="246" y="662" width="198" height="46" rx="6"/>
+        <text class="t" x="345" y="683" text-anchor="middle">Altavoz</text>
+        <text class="t-acc" x="345" y="699" text-anchor="middle">actuador · externo</text>
+
+        <!-- autobús: ESP-32 con sus sensores y actuadores -->
+        <rect class="group" x="510" y="498" width="420" height="170" rx="10"/>
+        <text class="t-hs" x="526" y="522">Autobús</text>
+        <text class="t-m" x="526" y="538">ESP-32 · id {b}, p. ej. AUT312</text>
+        <rect class="box" x="526" y="550" width="194" height="46" rx="6"/>
+        <text class="t" x="623" y="571" text-anchor="middle">Pantalla LCD 8x2</text>
+        <text class="t-acc" x="623" y="587" text-anchor="middle">actuador · kit 47</text>
+        <rect class="box" x="730" y="550" width="184" height="46" rx="6"/>
+        <text class="t" x="822" y="571" text-anchor="middle">Zumbador de puerta</text>
+        <text class="t-acc" x="822" y="587" text-anchor="middle">actuador · kit 5</text>
+        <rect class="box" x="526" y="606" width="194" height="46" rx="6"/>
+        <text class="t" x="623" y="627" text-anchor="middle">Servomotor rampa</text>
+        <text class="t-acc" x="623" y="643" text-anchor="middle">actuador · kit 45</text>
+        <rect class="box" x="730" y="606" width="184" height="46" rx="6"/>
+        <text class="t" x="822" y="627" text-anchor="middle">Pulsador conductor</text>
+        <text class="t-acc" x="822" y="643" text-anchor="middle">sensor · kit 7</text>
+      </svg>
+      </div>
+      <figcaption>De abajo arriba: nodos IoT, gateways, Internet y nube. La Raspberry de la parada hace de gateway: recibe la baliza por BLE y la lleva a Internet por MQTT, y controla por cable sus sensores y el altavoz. El ESP-32 del autobús sale por un router Wi-Fi. Parada y autobús no se conocen: todo pasa por el broker y la lógica está en Node-RED. El autobús no envía su posición: cuánto le queda sale de los horarios. Open Weather Map es un servicio externo: se le pregunta por HTTP el tiempo actual de Vigo, y si el suelo puede estar mojado la parada lo avisa por el altavoz.</figcaption>
+    </figure>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>Nodo</th><th>Responsabilidad</th><th>Publica</th><th>Se suscribe</th></tr></thead>
+        <tbody>
+          <tr><td>Dispositivo</td><td>Emite una baliza BLE con su id y el tipo de asistencia</td><td>Baliza BLE (no es MQTT)</td><td>Nada</td></tr>
+          <tr><td>Parada</td><td>Detecta la baliza, anuncia los autobuses, recoge la línea elegida y detecta cuándo un vehículo se detiene y se va. Avisa si el suelo está mojado</td><td><code>parada/{p}/solicitud</code><br><code>parada/{p}/deteccion</code></td><td><code>parada/{p}/proximos</code><br><code>parada/{p}/aviso</code></td></tr>
+          <tr><td>Node-RED</td><td>Con los horarios publica los próximos autobuses, avisa al siguiente de la línea pedida, cruza horarios y ultrasonidos, da las órdenes y cierra la solicitud</td><td><code>parada/{p}/proximos</code><br><code>parada/{p}/aviso</code><br><code>autobus/{b}/asistencia</code><br><code>autobus/{b}/orden</code></td><td><code>parada/+/solicitud</code><br><code>parada/+/deteccion</code><br><code>autobus/+/evento</code></td></tr>
+          <tr><td>Autobús</td><td>Muestra la solicitud en el LCD, hace sonar el zumbador o mueve la rampa y avisa cuando el conductor pulsa</td><td><code>autobus/{b}/evento</code></td><td><code>autobus/{b}/asistencia</code><br><code>autobus/{b}/orden</code></td></tr>
+          <tr><td>Open Weather Map</td><td>Servicio externo: da el tiempo actual de Vigo cuando se le pregunta</td><td>Nada, responde por HTTP</td><td>Nada</td></tr>
+          <tr><td>Usuario remoto</td><td>Operador de pruebas: carga los horarios y ve el estado en un dashboard de Node-RED</td><td>Nada</td><td>Todos, solo para mostrarlos</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="baliza">
+    <div class="view-head">
+      <span class="view-tag">Detalle · Enlace BLE</span>
+      <h2>La baliza y la detección de presencia</h2>
+      <p class="view-q">¿Cómo sabe la parada que el usuario ha llegado y que se ha ido?</p>
+    </div>
+    <figure>
+      <div class="svg-scroll">
+      <svg viewBox="0 0 960 190" role="img" aria-label="Línea de tiempo. El dispositivo emite una baliza cada 10 segundos. La parada da al usuario por presente en cuanto recibe la primera, como mucho 10 segundos después de que llegue. Lo sigue considerando presente mientras reciba balizas. Cuando pasan más de 2 minutos sin recibir ninguna, 12 balizas perdidas, lo da por ausente y queda libre para otro usuario.">
+        <defs>
+          <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+          </marker>
+        </defs>
+
+        <!-- tramo en el que la parada considera presente al usuario -->
+        <rect class="band" x="150" y="86" width="690" height="28" rx="4"/>
+
+        <!-- eje de tiempo -->
+        <line class="flow" x1="50" y1="100" x2="916" y2="100" marker-end="url(#a4)"/>
+        <text class="t-m" x="916" y="124" text-anchor="end">tiempo</text>
+
+        <!-- llegada -->
+        <line class="lifeline" x1="110" y1="48" x2="110" y2="96"/>
+        <text class="t-lbl" x="116" y="40" text-anchor="end">llega el usuario</text>
+
+        <!-- balizas recibidas -->
+        <circle class="dot" cx="150" cy="100" r="5"/>
+        <circle class="dot" cx="210" cy="100" r="5"/>
+        <circle class="dot" cx="270" cy="100" r="5"/>
+        <circle class="dot" cx="330" cy="100" r="5"/>
+        <circle class="dot" cx="390" cy="100" r="5"/>
+        <circle class="dot" cx="450" cy="100" r="5"/>
+        <circle class="dot" cx="540" cy="100" r="5"/>
+        <text class="t-m" x="150" y="132" text-anchor="middle">1.ª</text>
+        <text class="t-m" x="240" y="132" text-anchor="middle">cada 10 s</text>
+        <text class="t-m" x="495" y="132" text-anchor="middle">…</text>
+        <text class="t-m" x="540" y="132" text-anchor="middle">última</text>
+
+        <!-- presente -->
+        <line class="lifeline" x1="150" y1="62" x2="150" y2="86"/>
+        <text class="t-lbl" x="150" y="54">presente: anuncia los autobuses</text>
+
+        <!-- balizas que ya no llegan -->
+        <circle class="miss" cx="600" cy="100" r="5"/>
+        <circle class="miss" cx="660" cy="100" r="5"/>
+        <text class="t-m" x="720" y="96" text-anchor="middle">…</text>
+        <circle class="miss" cx="780" cy="100" r="5"/>
+
+        <!-- ausente -->
+        <line class="lifeline" x1="840" y1="62" x2="840" y2="86"/>
+        <text class="t-lbl" x="840" y="54" text-anchor="end">ausente: la parada queda libre</text>
+
+        <!-- acotaciones -->
+        <path class="flow" d="M110,150 v8 h40 v-8"/>
+        <text class="t-m" x="130" y="176" text-anchor="middle">hasta 10 s</text>
+        <path class="flow" d="M540,150 v8 h300 v-8"/>
+        <text class="t-m" x="690" y="176" text-anchor="middle">más de 2 min sin balizas (12 perdidas)</text>
+      </svg>
+      </div>
+      <figcaption>Punto relleno: baliza que la parada recibe. Punto hueco: baliza que ya no llega. La franja de color es el tiempo durante el que la parada considera que el usuario está presente.</figcaption>
+    </figure>
+    <ul class="rules">
+      <li><strong>Qué emite el dispositivo.</strong> Cada 10 s envía un anuncio BLE de 4 bytes: versión, tipo de asistencia e id de 16 bits. En MQTT el id se escribe como <code>D</code> y el número en decimal con al menos dos cifras (<code>0x0007</code> es <code>D07</code>). No se conecta a nada ni escucha, solo emite. Entre un envío y el siguiente el ESP-32 puede dormir, y eso es lo que permite alimentarlo con una batería pequeña.</li>
+      <li><strong>Por qué 10 s.</strong> BLE admite intervalos de anuncio de 20 ms a 10,24 s. Diez segundos está casi en el máximo: el dispositivo gasta muy poco, a cambio de que la parada tarde más en enterarse de que ha llegado alguien.</li>
+      <li><strong>Cómo escucha la parada.</strong> La Raspberry escanea BLE de forma continua y se queda solo con los anuncios que tienen el formato de la baliza. De cada uno guarda el id y el tipo de asistencia.</li>
+      <li><strong>Cuándo da al usuario por presente.</strong> En cuanto recibe una baliza. Como se emiten cada 10 s, pasan como mucho 10 s desde que el usuario llega hasta que la parada empieza a hablar. No se usa ningún umbral de señal: se asume que toda baliza recibida es de alguien que espera en la parada (supuesto S5).</li>
+      <li><strong>Cuándo lo da por ausente.</strong> Cuando lleva más de 2 minutos sin recibir ninguna, es decir, 12 balizas perdidas seguidas. Perder una o dos sueltas no cambia nada. En ese momento la parada lo olvida, para volver a anunciar los autobuses cuando llegue otro usuario. Si había una solicitud, sigue su curso.</li>
+      <li><strong>Limitaciones.</strong> Si la parada pierde la primera baliza, la espera inicial sube otros 10 s. Y fuera de los supuestos S4 y S5, la parada reaccionaría también ante alguien con dispositivo que solo pasa por delante.</li>
+    </ul>
+  </section>
+
+  <section id="secuencia">
+    <div class="view-head">
+      <span class="view-tag">Vista 2 · Comportamiento</span>
+      <h2>Secuencia de una solicitud</h2>
+      <p class="view-q">¿En qué orden pasan las cosas? Ejemplo: usuario con bastón que espera la línea C15.</p>
+    </div>
+    <figure>
+      <div class="svg-scroll">
+      <svg viewBox="0 0 960 740" role="img" aria-label="Node-RED mantiene en la parada la lista de próximos autobuses. La parada recibe la baliza del bastón y dice la lista por voz. El usuario elige C15 y la parada publica la solicitud. Node-RED avisa al siguiente autobús de la línea y confirma a la parada. Cuando el ultrasonidos detecta un vehículo parado dentro del margen de los horarios, Node-RED avisa a la parada y ordena guiar con el zumbador. El conductor pulsa, el autobús publica recogido y Node-RED cierra la solicitud en el autobús y en la parada.">
+        <defs>
+          <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+          </marker>
+        </defs>
+        <rect class="box" x="35" y="20" width="130" height="48" rx="8"/>
+        <text class="t-hs" x="100" y="42" text-anchor="middle">Usuario</text>
+        <text class="t-m" x="100" y="59" text-anchor="middle">bastón · D07</text>
+        <line class="lifeline" x1="100" y1="68" x2="100" y2="720"/>
+        <rect class="container" x="275" y="20" width="130" height="48" rx="8"/>
+        <text class="t-hs" x="340" y="42" text-anchor="middle">Parada</text>
+        <text class="t-m" x="340" y="59" text-anchor="middle">P101</text>
+        <line class="lifeline" x1="340" y1="68" x2="340" y2="720"/>
+        <rect class="orq" x="535" y="20" width="130" height="48" rx="8"/>
+        <text class="t-hs" x="600" y="42" text-anchor="middle">Node-RED</text>
+        <text class="t-m" x="600" y="59" text-anchor="middle">vía broker</text>
+        <line class="lifeline" x1="600" y1="68" x2="600" y2="720"/>
+        <rect class="container" x="785" y="20" width="130" height="48" rx="8"/>
+        <text class="t-hs" x="850" y="42" text-anchor="middle">Autobús</text>
+        <text class="t-m" x="850" y="59" text-anchor="middle">AUT312</text>
+        <line class="lifeline" x1="850" y1="68" x2="850" y2="720"/>
+        <text class="t-lbl" x="470" y="102" text-anchor="middle">proximos · retain</text>
+        <line class="flow" x1="596" y1="112" x2="344" y2="112" marker-end="url(#a2)"/>
+        <text class="t-lbl" x="220" y="142" text-anchor="middle">baliza BLE {visual}</text>
+        <line class="flow-ble" x1="104" y1="152" x2="336" y2="152" marker-end="url(#a2)"/>
+        <text class="t-lbl" x="220" y="182" text-anchor="middle">voz: «C15 en 4 min…»</text>
+        <line class="flow" x1="336" y1="192" x2="104" y2="192" marker-end="url(#a2)"/>
+        <text class="t-lbl" x="220" y="222" text-anchor="middle">elige C15 · encoder</text>
+        <line class="flow" x1="104" y1="232" x2="336" y2="232" marker-end="url(#a2)"/>
+        <text class="t-lbl" x="470" y="262" text-anchor="middle">solicitud {C15, visual}</text>
+        <line class="flow" x1="344" y1="272" x2="596" y2="272" marker-end="url(#a2)"/>
+        <text class="t-lbl" x="725" y="302" text-anchor="middle">asistencia · retain</text>
+        <line class="flow" x1="604" y1="312" x2="846" y2="312" marker-end="url(#a2)"/>
+        <text class="t-lbl" x="470" y="342" text-anchor="middle">aviso {asignado}</text>
+        <line class="flow" x1="596" y1="352" x2="344" y2="352" marker-end="url(#a2)"/>
+        <text class="t-lbl" x="220" y="382" text-anchor="middle">voz: «C15 avisada»</text>
+        <line class="flow" x1="336" y1="392" x2="104" y2="392" marker-end="url(#a2)"/>
+        <text class="t-lbl" x="470" y="432" text-anchor="middle">deteccion {detenido}</text>
+        <line class="flow" x1="344" y1="442" x2="596" y2="442" marker-end="url(#a2)"/>
+        <rect class="note" x="472" y="456" width="256" height="32" rx="6"/>
+        <text class="t" x="600" y="477" text-anchor="middle">vehículo parado + horario ± 30 s</text>
+        <text class="t-lbl" x="470" y="512" text-anchor="middle">aviso {llegado}</text>
+        <line class="flow" x1="596" y1="522" x2="344" y2="522" marker-end="url(#a2)"/>
+        <text class="t-lbl" x="725" y="512" text-anchor="middle">orden {guiar}</text>
+        <line class="flow" x1="604" y1="522" x2="846" y2="522" marker-end="url(#a2)"/>
+        <text class="t-lbl" x="220" y="552" text-anchor="middle">voz: «ha llegado»</text>
+        <line class="flow" x1="336" y1="562" x2="104" y2="562" marker-end="url(#a2)"/>
+        <rect class="note" x="772" y="536" width="156" height="32" rx="6"/>
+        <text class="t" x="850" y="557" text-anchor="middle">zumbador de puerta</text>
+        <rect class="note" x="762" y="584" width="176" height="32" rx="6"/>
+        <text class="t" x="850" y="605" text-anchor="middle">pulsador del conductor</text>
+        <text class="t-lbl" x="725" y="640" text-anchor="middle">evento {recogido}</text>
+        <line class="flow" x1="846" y1="650" x2="604" y2="650" marker-end="url(#a2)"/>
+        <text class="t-lbl" x="725" y="682" text-anchor="middle">orden {fin}</text>
+        <line class="flow" x1="604" y1="692" x2="846" y2="692" marker-end="url(#a2)"/>
+        <text class="t-lbl" x="470" y="682" text-anchor="middle">aviso {cerrada}</text>
+        <line class="flow" x1="596" y1="692" x2="344" y2="692" marker-end="url(#a2)"/>
+      </svg>
+      </div>
+      <figcaption>La flecha punteada es BLE y va directa del dispositivo a la parada. Las demás pasan por el broker. La lista de próximos está retenida, así que la parada ya la tiene cuando llega la baliza. Node-RED solo ordena guiar cuando el ultrasonidos ve un vehículo parado y, según los horarios, al autobús avisado le toca llegar en ese momento. Al cerrar, Node-RED borra la asignación retenida del autobús.</figcaption>
+    </figure>
+    <ul class="rules">
+      <li><strong>Silla de ruedas.</strong> La baliza lleva <code>movilidad</code>, la orden es <code>{rampa}</code> y el servo despliega la rampa. Con <code>orden {fin}</code> se recoge.</li>
+      <li><strong>El conductor no pulsa.</strong> Cuando el autobús se va, la parada publica <code>deteccion</code> con <code>estado: "libre"</code> y Node-RED cierra igual: <code>orden {fin}</code> al autobús y <code>aviso {cerrada}</code> a la parada.</li>
+      <li><strong>Sin autobuses.</strong> Si la lista de próximos está vacía, la parada lo dice y no se crea ninguna solicitud.</li>
+      <li><strong>Ya hay una solicitud.</strong> Si el usuario vuelve a pulsar, la parada le recuerda la línea que tiene pedida. No se crea otra.</li>
+    </ul>
+  </section>
+
+  <section id="estados">
+    <div class="view-head">
+      <span class="view-tag">Vista 3 · Comportamiento</span>
+      <h2>Estados de una solicitud</h2>
+      <p class="view-q">Dos estados y un final.</p>
+    </div>
+    <figure>
+      <div class="svg-scroll">
+      <svg viewBox="0 0 960 130" role="img" aria-label="La solicitud nace asignada. Pasa a en parada cuando coinciden el ultrasonidos y los horarios. De en parada pasa a cerrada cuando el conductor pulsa o cuando el autobús se va.">
+        <defs>
+          <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+          </marker>
+        </defs>
+        <circle class="dot" cx="30" cy="76" r="8"/>
+        <line class="flow" x1="38" y1="76" x2="86" y2="76" marker-end="url(#a3)"/>
+        <rect class="state-acc" x="90" y="50" width="150" height="52" rx="26"/>
+        <text class="t-hs" x="165" y="81" text-anchor="middle">asignada</text>
+        <line class="flow" x1="240" y1="76" x2="396" y2="76" marker-end="url(#a3)"/>
+        <text class="t-lbl" x="318" y="64" text-anchor="middle">vehículo detenido</text>
+        <text class="t-m" x="318" y="94" text-anchor="middle">+ horario ± 30 s</text>
+        <rect class="state" x="400" y="50" width="150" height="52" rx="26"/>
+        <text class="t-hs" x="475" y="81" text-anchor="middle">en parada</text>
+        <line class="flow" x1="550" y1="76" x2="716" y2="76" marker-end="url(#a3)"/>
+        <text class="t-lbl" x="633" y="64" text-anchor="middle">pulsador del conductor</text>
+        <text class="t-m" x="633" y="94" text-anchor="middle">o el autobús se va</text>
+        <rect class="state" x="720" y="50" width="150" height="52" rx="26"/>
+        <text class="t-hs" x="795" y="81" text-anchor="middle">cerrada</text>
+        <line class="flow" x1="870" y1="76" x2="908" y2="76" marker-end="url(#a3)"/>
+        <circle class="end" cx="926" cy="76" r="13"/>
+        <circle class="dot" cx="926" cy="76" r="7"/>
+      </svg>
+      </div>
+      <figcaption>La solicitud nace <code>asignada</code>, porque el autobús recibe el aviso en cuanto el usuario elige. Al cerrar, Node-RED envía <code>orden {fin}</code> al autobús y borra su asignación retenida.</figcaption>
+    </figure>
+  </section>
+
+  <section id="topics">
+    <div class="view-head">
+      <span class="view-tag">Contrato</span>
+      <h2>Topics y payloads</h2>
+      <p class="view-q"><code>{p}</code> = parada, <code>{b}</code> = autobús. En el broker público todos llevan delante el prefijo <code>napiot26paradabus7k3/</code>.</p>
+    </div>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>Topic</th><th>Dirección</th><th>Retain</th><th>Uso</th></tr></thead>
+        <tbody>
+          <tr><td><code>parada/{p}/proximos</code></td><td class="dir">nube → parada</td><td>Sí</td><td>Autobuses de los próximos 20 min. Se renueva cada 30 s</td></tr>
+          <tr><td><code>parada/{p}/solicitud</code></td><td class="dir">parada → nube</td><td>No</td><td>El usuario ha elegido una línea</td></tr>
+          <tr><td><code>parada/{p}/deteccion</code></td><td class="dir">parada → nube</td><td>No</td><td>Vehículo <code>detenido</code> o <code>libre</code></td></tr>
+          <tr><td><code>parada/{p}/aviso</code></td><td class="dir">nube → parada</td><td>No</td><td><code>asignado</code>, <code>llegado</code>, <code>cerrada</code></td></tr>
+          <tr><td><code>autobus/{b}/asistencia</code></td><td class="dir">nube → bus</td><td>Sí</td><td>Solicitud asignada, para el LCD. Vacío cuando no hay ninguna</td></tr>
+          <tr><td><code>autobus/{b}/orden</code></td><td class="dir">nube → bus</td><td>No</td><td><code>guiar</code>, <code>rampa</code>, <code>fin</code></td></tr>
+          <tr><td><code>autobus/{b}/evento</code></td><td class="dir">bus → nube</td><td>No</td><td><code>recogido</code> (pulsador del conductor)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="payloads">
+      <div>
+        <span class="topic">baliza BLE · no es MQTT</span>
+<pre><span class="c">// 4 bytes, cada 10 s</span>
+{ <span class="k">ver</span>: 1,
+  <span class="k">tipo</span>: 1,      <span class="c">// 1 visual, 2 movilidad</span>
+  <span class="k">id</span>: 0x0007 }  <span class="c">// D07</span></pre>
+      </div>
+      <div>
+        <span class="topic">parada/P101/proximos</span>
+<pre>{ <span class="k">ts</span>: 1763549980,
+  <span class="k">buses</span>: [
+    { <span class="k">linea</span>: "C15", <span class="k">min</span>: 4 },
+    { <span class="k">linea</span>: "L9",  <span class="k">min</span>: 12 } ] }</pre>
+      </div>
+      <div>
+        <span class="topic">parada/P101/solicitud</span>
+<pre>{ <span class="k">solicitud</span>: "S-8f3a",
+  <span class="k">linea</span>: "C15",
+  <span class="k">asistencia</span>: "visual" }</pre>
+      </div>
+      <div>
+        <span class="topic">parada/P101/deteccion</span>
+<pre>{ <span class="k">estado</span>: "detenido", <span class="c">// o "libre"</span>
+  <span class="k">distancia_cm</span>: 59 }</pre>
+      </div>
+      <div>
+        <span class="topic">parada/P101/aviso</span>
+<pre>{ <span class="k">tipo</span>: "asignado",
+  <span class="k">linea</span>: "C15",
+  <span class="k">solicitud</span>: "S-8f3a" }</pre>
+      </div>
+      <div>
+        <span class="topic">autobus/AUT312/asistencia</span>
+<pre>{ <span class="k">solicitud</span>: "S-8f3a",
+  <span class="k">parada</span>: "P101", <span class="k">linea</span>: "C15",
+  <span class="k">asistencia</span>: "visual" }</pre>
+      </div>
+      <div>
+        <span class="topic">autobus/AUT312/orden · evento</span>
+<pre>{ <span class="k">tipo</span>: "guiar", <span class="c">// rampa, fin · recogido</span>
+  <span class="k">solicitud</span>: "S-8f3a" }</pre>
+      </div>
+    </div>
+    <h3>Criterios</h3>
+    <ul class="rules">
+      <li><strong>Identificador de solicitud.</strong> Todos los mensajes de una solicitud llevan <code>solicitud</code>. El autobús solo obedece órdenes de la solicitud que tiene asignada.</li>
+      <li><strong>Retain</strong> solo en <code>proximos</code> y <code>asistencia</code>, para que quien se reinicia recupere lo vigente. La asignación se borra con un payload vacío al cerrar.</li>
+      <li><strong>QoS 1</strong> en todo. Repetir un mensaje no cambia nada.</li>
+      <li><strong>Ultrasonidos:</strong> vehículo detenido con menos de 150 cm durante 1 s. Fuera con 150 cm o más durante 1 s.</li>
+      <li><strong>Privacidad:</strong> ni la baliza ni los mensajes llevan datos personales, solo el tipo de asistencia.</li>
+    </ul>
+  </section>
+
+  <section id="implementacion">
+    <div class="view-head">
+      <span class="view-tag">Estado</span>
+      <h2>Implementación</h2>
+      <p class="view-q">¿Qué hay construido hoy?</p>
+    </div>
+    <p class="note-p">Este diseño está implementado y probado en Node-RED, con los nodos IoT simulados, MQTT sobre test.mosquitto.org, un dashboard con Dashboard 2.0 y el tiempo actual de Open Weather Map. Probados: el aviso de suelo mojado, el recorrido principal con bastón, el cierre sin pulsador en silla de ruedas y la parada sin autobuses.</p>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>Pestaña de Node-RED</th><th>Sustituye a</th><th>Qué simula</th></tr></thead>
+        <tbody>
+          <tr><td>Nube</td><td>Nada, es la nube real</td><td>Horarios precargados y lógica de las solicitudes</td></tr>
+          <tr><td>Parada P101</td><td>Raspberry Pi</td><td>Rotary encoder, ultrasonidos, escáner BLE y altavoz. Consulta Open Weather Map cada 30 s</td></tr>
+          <tr><td>Autobús AUT312</td><td>ESP-32</td><td>Pulsador, LCD, zumbador y servo</td></tr>
+          <tr><td>Dispositivo D07</td><td>ESP-32 del bastón o la silla</td><td>Baliza de 4 bytes cada 10 s</td></tr>
+          <tr><td>Panel</td><td>Nada, es el dashboard</td><td>Solo escucha por MQTT: gráficas, galga y tablas</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note-p">Las pestañas solo se comunican por el broker, así que la de nube no cambia cuando lleguen la Raspberry y los ESP-32.</p>
+  </section>
+
+  <section id="ampliaciones">
+    <div class="view-head">
+      <span class="view-tag">Después</span>
+      <h2>Ampliaciones</h2>
+      <p class="view-q">¿Qué se puede añadir sobre la base y qué pide cada cosa? Ninguna necesita sensores nuevos.</p>
+    </div>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>Ampliación</th><th>Qué aporta</th><th>Qué hay que añadir</th></tr></thead>
+        <tbody>
+          <tr><td>Cancelación por ausencia</td><td>Si el usuario se va antes de que llegue el autobús, el conductor queda liberado</td><td>Topic <code>parada/{p}/presencia</code> y aviso <code>cancelado</code>. Quita parte de S8</td></tr>
+          <tr><td>Aviso de 1 minuto</td><td>La parada dice qué línea llega cuando le falta 1 minuto</td><td>Un tipo de aviso (<code>1min</code>)</td></tr>
+          <tr><td>Margen de 10 minutos</td><td>El conductor no ve la solicitud hasta que está cerca</td><td>Estado y aviso <code>pendiente</code></td></tr>
+          <tr><td>Varios autobuses avisados</td><td>Con más autobuses en servicio, si hay dos de la línea cerca se avisa a los dos</td><td>Orden <code>cancelar</code> para los que no recogen</td></tr>
+          <tr><td>Paso al siguiente autobús</td><td>Si el autobús se va y la baliza sigue, se avisa al siguiente</td><td>Espera de 2 min tras irse el autobús. Quita el supuesto S8</td></tr>
+          <tr><td>Cierre por ausencia</td><td>Con el autobús parado, si la baliza desaparece cuenta como recogida</td><td>Una regla más en la nube</td></tr>
+          <tr><td>Cambio de línea y caducidad</td><td>Elegir otra línea sustituye la solicitud. A los 30 min caduca</td><td>Motivos de cancelación en el aviso</td></tr>
+          <tr><td>Caídas de nodos</td><td>Si cae la parada o el autobús, la solicitud no se queda colgada</td><td>Topics <code>estado</code> con LWT y sesión persistente. Quita parte de S6</td></tr>
+          <tr><td>Varias paradas por autobús</td><td>Un autobús puede tener solicitudes en dos paradas</td><td><code>autobus/{b}/asistencia/{p}</code>, un retenido por parada</td></tr>
+          <tr><td>Evento de rampa</td><td>La nube sabe que la rampa terminó de desplegarse</td><td>Evento <code>rampa_desplegada</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="preguntas">
+    <div class="view-head">
+      <h2>Preguntas abiertas</h2>
+    </div>
+    <ul class="qs">
+      <li><strong>Reparto por persona.</strong> Falta decidir qué sensor y qué actuador lleva cada miembro del grupo. Hay tres sensores y cuatro actuadores.</li>
+      <li><strong>Orden de las ampliaciones.</strong> Falta decidir cuáles se hacen y en qué orden. Las tres primeras de la tabla son las más baratas.</li>
+      <li><strong>Broker de la maqueta.</strong> La práctica usa el broker público test.mosquitto.org, sin usuarios ni ACLs. Falta decidir si la maqueta con hardware seguirá ahí.</li>
+      <li><strong>Usuarios sin dispositivo.</strong> Falta decidir si alguien que no lleva el dispositivo puede pedir asistencia en la parada.</li>
+    </ul>
+  </section>
+</div>
+</body></html>
