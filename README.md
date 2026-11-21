@@ -45,5 +45,6 @@ Con los flujos funcionando se comprobaron los tres casos principales:
 | Carpeta | Contenido |
 |---|---|
 | [`2_documentacion (Mario)/`](<2_documentacion (Mario)>) | [Diseño completo de la arquitectura](<2_documentacion (Mario)/Arquitectura_Parada_Autobus_base.html>) y la descripción de la implementación: [ejercicio 2](<2_documentacion (Mario)/implementacion_ej2.md>), [dashboard](<2_documentacion (Mario)/implementacion_ej3.md>) y [Open Weather Map](<2_documentacion (Mario)/implementacion_ej4.md>) |
+| [`1_flujos_node-red (Manuel)/`](<1_flujos_node-red (Manuel)>) | Los flujos de Node-RED de los ejercicios 2, 3 y 4 (`datos_nodered/flows.json`) y un [README](<1_flujos_node-red (Manuel)/README.md>) con el arranque y las pruebas paso a paso |
 
-Los flujos de Node-RED y la wiki se añadirán al repositorio cuando se suban las demás partes.
+La wiki se añadirá al repositorio cuando se suba la parte que falta.

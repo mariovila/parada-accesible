@@ -1,0 +1,5 @@
+datos_nodered/node_modules/
+datos_nodered/.config.*.backup
+datos_nodered/.config.nodes.json
+datos_nodered/.config.users.json
+datos_nodered/.flows*.backup
