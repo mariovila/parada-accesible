@@ -21,7 +21,6 @@ Hace falta Node.js y Node-RED (probado con Node-RED 5.0.10 y Node.js 26). Los pa
 ```bash
 npm install -g --unsafe-perm node-red          # solo la primera vez
 (cd datos_nodered && npm install)              # solo la primera vez: instala Dashboard 2.0 y Open Weather Map
-export OPENWEATHER_API_KEY=la_clave_del_grupo  # la API key de Open Weather Map no está en el repositorio
 node-red --userDir ./datos_nodered
 ```
 
@@ -46,6 +45,7 @@ Todo está en un único sitio: menú de Node-RED, Settings, Environment.
 | `MQTT_BROKER` | `test.mosquitto.org` | Broker |
 | `MQTT_PORT` | `1883` | Puerto |
 | `FACTOR_TIEMPO` | `6` | Acelera los tiempos del diseño. Con 1 son los reales |
+| `OPENWEATHER_API_KEY` | `PON_AQUI_TU_API_KEY` | API key de Open Weather Map. En el repositorio va un valor de relleno |
 
 Con `FACTOR_TIEMPO` = 6, cada tiempo del diseño dura la sexta parte:
 
@@ -57,7 +57,7 @@ Con `FACTOR_TIEMPO` = 6, cada tiempo del diseño dura la sexta parte:
 
 El aviso al autobús es inmediato: no hay margen de 10 minutos.
 
-La API key de Open Weather Map es la única configuración que no está en `flows.json`, para no publicarla. Node-RED la lee de la variable de entorno del sistema `OPENWEATHER_API_KEY`, que hay que definir antes de arrancar (con `export`, o como secreto del codespace con ese mismo nombre). Sin ella todo funciona menos el aviso de suelo mojado, y la consola muestra `Invalid API Key provided`.
+La API key de Open Weather Map no se publica: en el repositorio, `OPENWEATHER_API_KEY` tiene un valor de relleno. Antes de probar, escribe la tuya en Settings, Environment y pulsa Deploy. Sin ella todo funciona menos el aviso de suelo mojado, y la consola muestra `Invalid API Key provided`.
 
 ## Pestañas
 
@@ -147,7 +147,7 @@ No se puede forzar: depende del tiempo real en Vigo.
 
 1. En la pestaña Parada P101, mira el texto bajo el nodo **Transformar tiempo en mensaje**: dice `suelo mojado (...)` o `suelo seco (...)` según la última consulta.
 2. Si dice `suelo mojado`, pulsa **Llega con bastón**. En menos de 30 s el altavoz dice «Atención: está lloviendo, el suelo puede estar resbaladizo…», una sola vez.
-3. Si la consola muestra `Invalid API Key provided`, revisa que la variable de entorno `OPENWEATHER_API_KEY` esté definida en el terminal desde el que arrancas Node-RED. Una clave recién creada puede tardar en activarse.
+3. Si la consola muestra `Invalid API Key provided`, revisa `OPENWEATHER_API_KEY` en Settings, Environment. Una clave recién creada puede tardar en activarse.
 
 Para que la clave funcione al copiar el proyecto, `datos_nodered` tiene que llevar también `flows_cred.json` y `.config.runtime.json`.
 
