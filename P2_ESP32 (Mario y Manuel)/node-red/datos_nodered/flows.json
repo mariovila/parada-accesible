@@ -1,0 +1,3647 @@
+[
+    {
+        "id": "tab_nube",
+        "type": "tab",
+        "label": "Nube",
+        "disabled": false,
+        "info": "Lógica de nube: horarios precargados y gestor de solicitudes.\n\nEs la única pestaña que no se sustituye por hardware. Solo habla con las demás por MQTT.\n\nConfiguración (prefijo de los topics, broker y factor de tiempo): menú, Settings, Environment.",
+        "env": []
+    },
+    {
+        "id": "tab_parada",
+        "type": "tab",
+        "label": "Parada P101",
+        "disabled": true,
+        "info": "Nodo virtual de la parada: lo que hará la Raspberry Pi con el rotary encoder, el ultrasonidos, el escáner BLE y el altavoz.\n\nSolo habla con las demás pestañas por MQTT. Cuando haya Raspberry real, esta pestaña se desactiva.",
+        "env": [
+            {
+                "name": "PARADA_ID",
+                "value": "P101",
+                "type": "str"
+            },
+            {
+                "name": "UMBRAL_CM",
+                "value": "150",
+                "type": "str"
+            },
+            {
+                "name": "T_DETENCION_MS",
+                "value": "1000",
+                "type": "str"
+            }
+        ]
+    },
+    {
+        "id": "tab_aut312",
+        "type": "tab",
+        "label": "Autobús AUT312",
+        "disabled": true,
+        "info": "Nodo virtual del autobús AUT312: lo que hará el ESP32 con el pulsador, el LCD 0802, el zumbador y el servo de la rampa.\n\nSolo habla con las demás pestañas por MQTT. Para añadir otro autobús, se duplica la pestaña y se cambia la variable de entorno BUS_ID.",
+        "env": [
+            {
+                "name": "BUS_ID",
+                "value": "AUT312",
+                "type": "str"
+            }
+        ]
+    },
+    {
+        "id": "tab_dispositivo",
+        "type": "tab",
+        "label": "Dispositivo D07",
+        "disabled": false,
+        "info": "Nodo virtual del dispositivo de usuario: un ESP32 en el bastón o en la silla que emite una baliza BLE de 4 bytes cada 10 s.\n\nEl BLE real no pasa por el broker. Aquí la radio se simula con el topic {prefijo}/sim/ble/{parada}, que la nube no escucha. Cuando haya hardware, esta pestaña y ese topic desaparecen.",
+        "env": [
+            {
+                "name": "DISPOSITIVO_ID",
+                "value": "7",
+                "type": "str"
+            },
+            {
+                "name": "PARADA_CERCANA",
+                "value": "P101",
+                "type": "str"
+            }
+        ]
+    },
+    {
+        "id": "tab_panel",
+        "type": "tab",
+        "label": "Panel",
+        "disabled": false,
+        "info": "Dashboard 2.0 del operador (ejercicio 3). Se ve en /dashboard.\n\nEsta pestaña solo escucha por MQTT: reconstruye el estado de la parada, de la solicitud y de los autobuses con los mismos mensajes que verá cuando haya hardware.\n\nLos botones del dashboard no están aquí: cada uno vive en la pestaña del dispositivo que maneja, junto a su inject.",
+        "env": [
+            {
+                "name": "PARADA_ID",
+                "value": "P101",
+                "type": "str"
+            },
+            {
+                "name": "BUSES",
+                "value": "AUT312",
+                "type": "str"
+            }
+        ]
+    },
+    {
+        "id": "cfg_global",
+        "type": "global-config",
+        "env": [
+            {
+                "name": "TOPIC_PREFIX",
+                "value": "napiot26paradabus7k3",
+                "type": "str"
+            },
+            {
+                "name": "MQTT_BROKER",
+                "value": "test.mosquitto.org",
+                "type": "str"
+            },
+            {
+                "name": "MQTT_PORT",
+                "value": "1883",
+                "type": "str"
+            },
+            {
+                "name": "FACTOR_TIEMPO",
+                "value": "6",
+                "type": "str"
+            },
+            {
+                "name": "OPENWEATHER_API_KEY",
+                "value": "PON_AQUI_TU_API_KEY",
+                "type": "str"
+            }
+        ],
+        "modules": {}
+    },
+    {
+        "id": "nub_broker",
+        "type": "mqtt-broker",
+        "z": "tab_nube",
+        "name": "MQTT nube",
+        "broker": "${MQTT_BROKER}",
+        "port": "${MQTT_PORT}",
+        "clientid": "",
+        "autoConnect": false,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "par_broker",
+        "type": "mqtt-broker",
+        "z": "tab_parada",
+        "name": "MQTT parada",
+        "broker": "${MQTT_BROKER}",
+        "port": "${MQTT_PORT}",
+        "clientid": "",
+        "autoConnect": false,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "aut312_broker",
+        "type": "mqtt-broker",
+        "z": "tab_aut312",
+        "name": "MQTT AUT312",
+        "broker": "${MQTT_BROKER}",
+        "port": "${MQTT_PORT}",
+        "clientid": "",
+        "autoConnect": false,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "dis_broker",
+        "type": "mqtt-broker",
+        "z": "tab_dispositivo",
+        "name": "Aire BLE simulado",
+        "broker": "${MQTT_BROKER}",
+        "port": "${MQTT_PORT}",
+        "clientid": "",
+        "autoConnect": false,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "ui_base",
+        "type": "ui-base",
+        "name": "Parada accesible",
+        "path": "/dashboard",
+        "appIcon": "",
+        "includeClientData": true,
+        "acceptsClientConfig": [
+            "ui-notification",
+            "ui-control"
+        ],
+        "showPathInSidebar": false,
+        "headerContent": "page",
+        "navigationStyle": "default",
+        "titleBarStyle": "default",
+        "showReconnectNotification": true,
+        "notificationDisplayTime": 1,
+        "showDisconnectNotification": true,
+        "allowInstall": false
+    },
+    {
+        "id": "ui_tema",
+        "type": "ui-theme",
+        "name": "Tema parada",
+        "colors": {
+            "surface": "#ffffff",
+            "primary": "#0f7c86",
+            "bgPage": "#f6f8f9",
+            "groupBg": "#ffffff",
+            "groupOutline": "#c9d3d8"
+        },
+        "sizes": {
+            "density": "default",
+            "pagePadding": "12px",
+            "groupGap": "12px",
+            "groupBorderRadius": "6px",
+            "widgetGap": "10px"
+        }
+    },
+    {
+        "id": "ui_pagina",
+        "type": "ui-page",
+        "name": "Parada P101",
+        "ui": "ui_base",
+        "path": "/parada",
+        "icon": "bus-stop",
+        "layout": "grid",
+        "theme": "ui_tema",
+        "breakpoints": [
+            {
+                "name": "Default",
+                "px": 0,
+                "cols": 3
+            },
+            {
+                "name": "Tablet",
+                "px": 576,
+                "cols": 6
+            },
+            {
+                "name": "Small Desktop",
+                "px": 768,
+                "cols": 9
+            },
+            {
+                "name": "Desktop",
+                "px": 1024,
+                "cols": 12
+            }
+        ],
+        "order": 1,
+        "className": "",
+        "visible": "true",
+        "disabled": "false"
+    },
+    {
+        "id": "ui_g_operador",
+        "type": "ui-group",
+        "name": "Operador de pruebas",
+        "page": "ui_pagina",
+        "width": "4",
+        "height": "1",
+        "order": 1,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "ui_g_sim",
+        "type": "ui-group",
+        "name": "Simulación de los dispositivos",
+        "page": "ui_pagina",
+        "width": "4",
+        "height": "1",
+        "order": 2,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "ui_g_parada",
+        "type": "ui-group",
+        "name": "Parada P101",
+        "page": "ui_pagina",
+        "width": "4",
+        "height": "1",
+        "order": 3,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "ui_g_min",
+        "type": "ui-group",
+        "name": "Minutos hasta el próximo autobús de cada línea",
+        "page": "ui_pagina",
+        "width": "5",
+        "height": "1",
+        "order": 4,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "ui_g_estado",
+        "type": "ui-group",
+        "name": "Estado de la solicitud",
+        "page": "ui_pagina",
+        "width": "4",
+        "height": "1",
+        "order": 5,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "ui_g_galga",
+        "type": "ui-group",
+        "name": "Minutos al próximo autobús",
+        "page": "ui_pagina",
+        "width": "3",
+        "height": "1",
+        "order": 6,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "ui_g_buses",
+        "type": "ui-group",
+        "name": "Autobús",
+        "page": "ui_pagina",
+        "width": "6",
+        "height": "1",
+        "order": 7,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "ui_g_result",
+        "type": "ui-group",
+        "name": "Solicitudes cerradas",
+        "page": "ui_pagina",
+        "width": "6",
+        "height": "1",
+        "order": 8,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "ui_g_eventos",
+        "type": "ui-group",
+        "name": "Últimos mensajes MQTT",
+        "page": "ui_pagina",
+        "width": "12",
+        "height": "1",
+        "order": 9,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "pan_broker",
+        "type": "mqtt-broker",
+        "z": "tab_panel",
+        "name": "MQTT panel",
+        "broker": "${MQTT_BROKER}",
+        "port": "${MQTT_PORT}",
+        "clientid": "",
+        "autoConnect": false,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "nub_c1",
+        "type": "comment",
+        "z": "tab_nube",
+        "name": "Conexión MQTT (prefijo y broker en Settings > Environment)",
+        "info": "",
+        "x": 250,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "nub_inj_arranque",
+        "type": "inject",
+        "z": "tab_nube",
+        "name": "Arranque",
+        "props": [
+            {
+                "p": "origen",
+                "v": "arranque",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.5,
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 120,
+        "y": 80,
+        "wires": [
+            [
+                "nub_fn_conectar"
+            ]
+        ]
+    },
+    {
+        "id": "nub_fn_conectar",
+        "type": "function",
+        "z": "tab_nube",
+        "name": "Conectar y suscribir",
+        "func": "// Conecta la nube al broker y se suscribe a lo que publican paradas y autobuses.\n// El prefijo sale de la variable de entorno global TOPIC_PREFIX.\nconst P = env.get(\"TOPIC_PREFIX\");\nconst temas = [\"parada/+/solicitud\", \"parada/+/deteccion\", \"autobus/+/evento\"];\nnode.send([{ action: \"connect\", broker: {\n    broker: env.get(\"MQTT_BROKER\"), port: Number(env.get(\"MQTT_PORT\")),\n    clientid: \"\", cleansession: true, force: true\n} }, null]);\nnode.send([{ action: \"subscribe\", topic: temas.map(t => ({ topic: `${P}/${t}`, qos: 1 })) }, null]);\nnode.send([null, { origen: \"arranque\" }]);\nnode.status({ fill: \"blue\", shape: \"ring\", text: `${P}/... (${temas.length} suscripciones)` });\nreturn null;",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 320,
+        "y": 80,
+        "wires": [
+            [
+                "nub_mqtt_in"
+            ],
+            [
+                "nub_fn_gestor"
+            ]
+        ]
+    },
+    {
+        "id": "nub_mqtt_in",
+        "type": "mqtt in",
+        "z": "tab_nube",
+        "name": "MQTT de la parada y el autobús",
+        "topic": "",
+        "qos": "1",
+        "datatype": "auto-detect",
+        "broker": "nub_broker",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 1,
+        "x": 580,
+        "y": 60,
+        "wires": [
+            [
+                "nub_fn_gestor",
+                "nub_dbg_in"
+            ]
+        ]
+    },
+    {
+        "id": "nub_dbg_in",
+        "type": "debug",
+        "z": "tab_nube",
+        "name": "MQTT recibido",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 860,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "nub_c2",
+        "type": "comment",
+        "z": "tab_nube",
+        "name": "Horarios: escenarios de prueba precargados (S3). Pulsar uno lo carga y pone el reloj a cero",
+        "info": "",
+        "x": 350,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "nub_inj_e1",
+        "type": "inject",
+        "z": "tab_nube",
+        "name": "Cargar E1: C15 a +4 min, L9 a +12",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "E1",
+        "payloadType": "str",
+        "x": 200,
+        "y": 240,
+        "wires": [
+            [
+                "nub_fn_horarios"
+            ]
+        ]
+    },
+    {
+        "id": "nub_inj_e2",
+        "type": "inject",
+        "z": "tab_nube",
+        "name": "Cargar E2: sin autobuses en 20 min",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "E2",
+        "payloadType": "str",
+        "x": 190,
+        "y": 280,
+        "wires": [
+            [
+                "nub_fn_horarios"
+            ]
+        ]
+    },
+    {
+        "id": "nub_fn_horarios",
+        "type": "function",
+        "z": "tab_nube",
+        "name": "Horarios",
+        "func": "// HORARIOS PRECARGADOS (supuesto S3).\n// Cada escenario fija línea, parada, autobús y minuto de paso.\n// t_min son minutos desde que se carga el escenario, para poder repetir la prueba.\nconst ESCENARIOS = {\n    E1: {\n        id: \"E1\",\n        descripcion: \"Un C15 a los 4 min y un L9 a los 12\",\n        pasos: [\n            { linea: \"C15\", parada: \"P101\", bus: \"AUT312\", t_min: 4 },\n            { linea: \"L9\",  parada: \"P101\", bus: \"AUT205\", t_min: 12 }\n        ]\n    },\n    E2: {\n        id: \"E2\",\n        descripcion: \"Sin autobuses en los próximos 20 min: el primero pasa a los 26\",\n        pasos: [\n            { linea: \"C15\", parada: \"P101\", bus: \"AUT312\", t_min: 26 }\n        ]\n    }\n};\n\nif (msg.payload === \"limpiar\") return { origen: \"limpiar\" };   // botón del panel\nconst e = ESCENARIOS[msg.payload];\nif (!e) { node.warn(`Escenario desconocido: ${msg.payload}`); return null; }\nnode.status({ fill: \"green\", shape: \"dot\", text: `${e.id}: ${e.descripcion}` });\nreturn { origen: \"escenario\", payload: e };",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 480,
+        "y": 260,
+        "wires": [
+            [
+                "nub_fn_gestor"
+            ]
+        ]
+    },
+    {
+        "id": "nub_c3",
+        "type": "comment",
+        "z": "tab_nube",
+        "name": "Gestor de solicitudes: asignada, en parada y cerrada",
+        "info": "",
+        "x": 340,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "nub_inj_tick",
+        "type": "inject",
+        "z": "tab_nube",
+        "name": "Tick 0,5 s",
+        "props": [
+            {
+                "p": "origen",
+                "v": "tick",
+                "vt": "str"
+            }
+        ],
+        "repeat": "0.5",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 130,
+        "y": 440,
+        "wires": [
+            [
+                "nub_fn_gestor"
+            ]
+        ]
+    },
+    {
+        "id": "nub_inj_limpiar",
+        "type": "inject",
+        "z": "tab_nube",
+        "name": "Limpiar retenidos y descargar escenario",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "limpiar",
+        "payloadType": "str",
+        "x": 200,
+        "y": 480,
+        "wires": [
+            [
+                "nub_fn_horarios"
+            ]
+        ]
+    },
+    {
+        "id": "nub_fn_gestor",
+        "type": "function",
+        "z": "tab_nube",
+        "name": "Gestor de solicitudes",
+        "func": "// GESTOR DE SOLICITUDES (lógica de nube, diseño base).\n// Una solicitud por parada y un autobús avisado por solicitud.\n// Estados: asignada -> en_parada -> cerrada.\n// Salida 1: MQTT. Salida 2: trazas. Salidas 3 y 4: reloj y siguiente autobús para el panel.\nconst P = env.get(\"TOPIC_PREFIX\");\nconst F = Number(env.get(\"FACTOR_TIEMPO\")) || 1;\n\n// Tiempos del diseño en segundos. El reloj simulado avanza F veces más rápido.\nconst T = { proximos: 20 * 60, margen: 30, renovar: 30 };\n\nconst ahora = Date.now();\nconst mqtt = [], trazas = [];\n\nlet st = flow.get(\"nube\");\nif (!st || msg.origen === \"arranque\") st = { escenario: null, t0: 0, solicitudes: {}, ultimoProximos: -1e9 };\n\nfunction pub(tema, payload, retain) { mqtt.push({ topic: `${P}/${tema}`, payload: payload, qos: 1, retain: !!retain }); }\nfunction traza(texto) { trazas.push({ payload: texto }); }\nfunction simS() { return st.escenario ? (ahora - st.t0) * F / 1000 : 0; }\nfunction eta(paso) { return paso.t_min * 60 - simS(); }\nfunction pasosDe(parada) { return st.escenario ? st.escenario.pasos.filter(p => p.parada === parada) : []; }\nfunction paradas() { return st.escenario ? [...new Set(st.escenario.pasos.map(p => p.parada))] : []; }\nfunction aviso(s, tipo) { pub(`parada/${s.parada}/aviso`, { tipo: tipo, linea: s.linea, solicitud: s.id }); }\nfunction orden(s, tipo) { pub(`autobus/${s.bus}/orden`, { tipo: tipo, solicitud: s.id }); }\n\nfunction publicarProximos(parada) {\n    const buses = pasosDe(parada)\n        .map(p => ({ linea: p.linea, eta: eta(p) }))\n        .filter(x => x.eta > 0 && x.eta <= T.proximos)\n        .sort((a, b) => a.eta - b.eta)\n        .map(x => ({ linea: x.linea, min: Math.ceil(x.eta / 60) }));\n    pub(`parada/${parada}/proximos`, { ts: Math.floor(ahora / 1000), buses: buses }, true);\n}\n// Cierre: orden fin al autobús, asignación borrada y aviso a la parada\nfunction cerrar(s, motivo) {\n    orden(s, \"fin\");\n    pub(`autobus/${s.bus}/asistencia`, \"\", true);\n    aviso(s, \"cerrada\");\n    delete st.solicitudes[s.parada];\n    traza(`Solicitud ${s.id} (${s.linea}, ${s.bus}): ${s.estado} -> cerrada (${motivo})`);\n}\n\nif (msg.origen === \"arranque\") {\n    traza(`Nube arrancada. Prefijo ${P}, factor de tiempo ${F}`);\n} else if (msg.origen === \"escenario\" || msg.origen === \"limpiar\") {\n    for (const s of Object.values(st.solicitudes)) cerrar(s, \"cambio de escenario\");\n    const viejo = st.escenario;\n    st.escenario = msg.origen === \"escenario\" ? msg.payload : null;\n    st.t0 = ahora;\n    st.ultimoProximos = 0;\n    // La nube empieza sin solicitudes: se borran las asignaciones retenidas que pudieran quedar\n    const buses = new Set([].concat(viejo ? viejo.pasos : [], st.escenario ? st.escenario.pasos : []).map(p => p.bus));\n    buses.forEach(b => pub(`autobus/${b}/asistencia`, \"\", true));\n    if (st.escenario) {\n        paradas().forEach(publicarProximos);\n        traza(`Escenario ${st.escenario.id} cargado: ${st.escenario.descripcion}`);\n    } else {\n        if (viejo) [...new Set(viejo.pasos.map(p => p.parada))].forEach(p => pub(`parada/${p}/proximos`, \"\", true));\n        traza(\"Escenario descargado y retenidos limpiados\");\n    }\n} else if (msg.origen === \"tick\") {\n    if (st.escenario) {\n        if (simS() - st.ultimoProximos >= T.renovar) {\n            st.ultimoProximos = simS();\n            paradas().forEach(publicarProximos);\n        }\n        // Salvaguarda: al autobús avisado se le pasó su margen sin que el ultrasonidos lo viera\n        for (const s of Object.values(st.solicitudes)) {\n            if (s.estado === \"asignada\" && s.t - simS() < -T.margen) cerrar(s, \"autobús no detectado\");\n        }\n    }\n} else if (typeof msg.topic === \"string\" && msg.topic.startsWith(P + \"/\")) {\n    const [clase, id, tema] = msg.topic.slice(P.length + 1).split(\"/\");\n    const m = msg.payload;\n    const valido = m && typeof m === \"object\";\n    const s = clase === \"parada\" ? st.solicitudes[id] : Object.values(st.solicitudes).find(x => x.bus === id);\n\n    if (clase === \"parada\" && tema === \"solicitud\" && valido && m.solicitud && m.linea) {\n        if (s) {\n            traza(`${id}: ya hay una solicitud activa, se ignora la nueva`);\n        } else {\n            // Se avisa al siguiente autobús de la línea elegida\n            const paso = pasosDe(id).filter(p => p.linea === m.linea && eta(p) > 0).sort((a, b) => a.t_min - b.t_min)[0];\n            const nueva = { id: m.solicitud, parada: id, linea: m.linea,\n                asistencia: m.asistencia === \"movilidad\" ? \"movilidad\" : \"visual\",\n                bus: paso ? paso.bus : null, t: paso ? paso.t_min * 60 : 0, estado: \"asignada\" };\n            if (!paso) {\n                aviso(nueva, \"cerrada\");\n                traza(`Solicitud ${nueva.id}: no quedan autobuses de la línea ${nueva.linea}`);\n            } else {\n                st.solicitudes[id] = nueva;\n                pub(`autobus/${nueva.bus}/asistencia`, { solicitud: nueva.id, parada: id, linea: nueva.linea, asistencia: nueva.asistencia }, true);\n                aviso(nueva, \"asignado\");\n                traza(`Solicitud ${nueva.id}: ${nueva.linea}, ${nueva.asistencia}. Avisado ${nueva.bus} (llega en ${Math.round(eta(paso))} s)`);\n            }\n        }\n    } else if (clase === \"parada\" && tema === \"deteccion\" && valido) {\n        if (m.estado === \"detenido\" && s && s.estado === \"asignada\") {\n            // Doble verificación: vehículo detenido y, según los horarios, al autobús avisado le toca llegar\n            const e = s.t - simS();\n            if (e > -T.margen && e <= T.margen) {\n                s.estado = \"en_parada\";\n                aviso(s, \"llegado\");\n                orden(s, s.asistencia === \"movilidad\" ? \"rampa\" : \"guiar\");\n                traza(`Solicitud ${s.id}: asignada -> en_parada (${s.bus}, ${m.distancia_cm} cm)`);\n            } else {\n                traza(`${id}: vehículo detenido fuera del margen de ${s.bus}, se ignora`);\n            }\n        } else if (m.estado === \"libre\" && s && s.estado === \"en_parada\") {\n            cerrar(s, \"el autobús se va\");   // la solicitud termina aunque el conductor no pulse\n        }\n    } else if (clase === \"autobus\" && tema === \"evento\" && valido && m.tipo === \"recogido\") {\n        if (s && s.id === m.solicitud && s.estado === \"en_parada\") cerrar(s, \"pulsador del conductor\");\n        else traza(`${id}: recogido ignorado, ese autobús no está en la parada`);\n    }\n}\n\nflow.set(\"nube\", st);\n\n// Estado del nodo y reloj para el panel\nlet panelReloj = \"sin escenario cargado\", panelSiguiente = \"ninguno\";\nif (st.escenario) {\n    const t = simS();\n    const mmss = x => `${Math.floor(x / 60)}:${String(Math.floor(x % 60)).padStart(2, \"0\")}`;\n    const sig = st.escenario.pasos.map(p => ({ p: p, e: eta(p) })).filter(x => x.e > -T.margen).sort((a, b) => a.e - b.e)[0];\n    panelReloj = `${st.escenario.id}, minuto ${mmss(t)}${F !== 1 ? \" (tiempo x\" + F + \")\" : \"\"}`;\n    if (sig) panelSiguiente = sig.e > T.margen ? `${sig.p.linea} ${sig.p.bus} pasa en ${Math.round(sig.e / F)} s` : `${sig.p.linea} ${sig.p.bus} está pasando ahora`;\n    const sols = Object.values(st.solicitudes).map(s => `${s.parada} ${s.linea} ${s.estado}`);\n    node.status({ fill: sols.length ? \"green\" : \"blue\", shape: \"dot\", text: `${panelReloj} | ${panelSiguiente}${sols.length ? \" | \" + sols.join(\", \") : \"\"}` });\n} else {\n    node.status({ fill: \"grey\", shape: \"ring\", text: \"sin escenario cargado\" });\n}\nconst previo = context.get(\"panel\") || {};\nconst salReloj = previo.reloj !== panelReloj ? { payload: panelReloj } : null;\nconst salSiguiente = previo.siguiente !== panelSiguiente ? { payload: panelSiguiente } : null;\ncontext.set(\"panel\", { reloj: panelReloj, siguiente: panelSiguiente });\n\nreturn [mqtt, trazas, salReloj, salSiguiente];",
+        "outputs": 4,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 700,
+        "y": 260,
+        "wires": [
+            [
+                "nub_mqtt_out",
+                "nub_dbg_out"
+            ],
+            [
+                "nub_dbg_traza"
+            ],
+            [
+                "nub_ui_reloj"
+            ],
+            [
+                "nub_ui_siguiente"
+            ]
+        ]
+    },
+    {
+        "id": "nub_mqtt_out",
+        "type": "mqtt out",
+        "z": "tab_nube",
+        "name": "MQTT hacia la parada y el autobús",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "nub_broker",
+        "x": 990,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "nub_dbg_out",
+        "type": "debug",
+        "z": "tab_nube",
+        "name": "MQTT enviado",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 940,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "nub_dbg_traza",
+        "type": "debug",
+        "z": "tab_nube",
+        "name": "Traza nube",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 930,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "nub_c4",
+        "type": "comment",
+        "z": "tab_nube",
+        "name": "Dashboard: botones y reloj del operador de pruebas",
+        "info": "",
+        "x": 230,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "nub_ui_e1",
+        "type": "ui-button",
+        "z": "tab_nube",
+        "group": "ui_g_operador",
+        "name": "Cargar E1: C15 a 4 min, L9 a 12",
+        "label": "Cargar E1: C15 a 4 min, L9 a 12",
+        "order": 3,
+        "width": 4,
+        "height": 1,
+        "emulateClick": false,
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "iconPosition": "left",
+        "payload": "E1",
+        "payloadType": "str",
+        "topic": "",
+        "topicType": "str",
+        "buttonColor": "",
+        "textColor": "",
+        "iconColor": "",
+        "enableClick": true,
+        "enablePointerdown": false,
+        "pointerdownPayload": "",
+        "pointerdownPayloadType": "str",
+        "enablePointerup": false,
+        "pointerupPayload": "",
+        "pointerupPayloadType": "str",
+        "x": 200,
+        "y": 600,
+        "wires": [
+            [
+                "nub_fn_horarios"
+            ]
+        ]
+    },
+    {
+        "id": "nub_ui_e2",
+        "type": "ui-button",
+        "z": "tab_nube",
+        "group": "ui_g_operador",
+        "name": "Cargar E2: sin autobuses en 20 min",
+        "label": "Cargar E2: sin autobuses en 20 min",
+        "order": 4,
+        "width": 4,
+        "height": 1,
+        "emulateClick": false,
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "iconPosition": "left",
+        "payload": "E2",
+        "payloadType": "str",
+        "topic": "",
+        "topicType": "str",
+        "buttonColor": "",
+        "textColor": "",
+        "iconColor": "",
+        "enableClick": true,
+        "enablePointerdown": false,
+        "pointerdownPayload": "",
+        "pointerdownPayloadType": "str",
+        "enablePointerup": false,
+        "pointerupPayload": "",
+        "pointerupPayloadType": "str",
+        "x": 190,
+        "y": 640,
+        "wires": [
+            [
+                "nub_fn_horarios"
+            ]
+        ]
+    },
+    {
+        "id": "nub_ui_limpiar",
+        "type": "ui-button",
+        "z": "tab_nube",
+        "group": "ui_g_operador",
+        "name": "Limpiar retenidos y descargar",
+        "label": "Limpiar retenidos y descargar",
+        "order": 5,
+        "width": 4,
+        "height": 1,
+        "emulateClick": false,
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "iconPosition": "left",
+        "payload": "limpiar",
+        "payloadType": "str",
+        "topic": "",
+        "topicType": "str",
+        "buttonColor": "",
+        "textColor": "",
+        "iconColor": "",
+        "enableClick": true,
+        "enablePointerdown": false,
+        "pointerdownPayload": "",
+        "pointerdownPayloadType": "str",
+        "enablePointerup": false,
+        "pointerupPayload": "",
+        "pointerupPayloadType": "str",
+        "x": 180,
+        "y": 720,
+        "wires": [
+            [
+                "nub_fn_horarios"
+            ]
+        ]
+    },
+    {
+        "id": "nub_ui_reloj",
+        "type": "ui-text",
+        "z": "tab_nube",
+        "group": "ui_g_operador",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "name": "Escenario",
+        "label": "Escenario",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#717171",
+        "wrapText": true,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 950,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "nub_ui_siguiente",
+        "type": "ui-text",
+        "z": "tab_nube",
+        "group": "ui_g_operador",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "name": "Siguiente autobús",
+        "label": "Siguiente autobús",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#717171",
+        "wrapText": true,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 970,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "par_c1",
+        "type": "comment",
+        "z": "tab_parada",
+        "name": "Conexión MQTT de la parada",
+        "info": "",
+        "x": 210,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "par_inj_arranque",
+        "type": "inject",
+        "z": "tab_parada",
+        "name": "Arranque",
+        "props": [
+            {
+                "p": "origen",
+                "v": "arranque",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.5,
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 120,
+        "y": 80,
+        "wires": [
+            [
+                "par_fn_conectar"
+            ]
+        ]
+    },
+    {
+        "id": "par_fn_conectar",
+        "type": "function",
+        "z": "tab_parada",
+        "name": "Conectar y suscribir",
+        "func": "// Conecta la parada al broker y se suscribe a sus topics.\n// Salida 1: acciones para el mqtt in de avisos. Salida 2: acciones para el mqtt in\n// del escáner BLE simulado. Salida 3: arranque del firmware.\nconst P = env.get(\"TOPIC_PREFIX\");\nconst ID = env.get(\"PARADA_ID\");\nnode.send([{ action: \"connect\", broker: {\n    broker: env.get(\"MQTT_BROKER\"), port: Number(env.get(\"MQTT_PORT\")),\n    clientid: \"\", cleansession: true, force: true\n} }, null, null]);\nnode.send([{ action: \"subscribe\", topic: [\n    { topic: `${P}/parada/${ID}/aviso`, qos: 1 },\n    { topic: `${P}/parada/${ID}/proximos`, qos: 1 }\n] }, null, null]);\n// \"El aire\" alrededor de la parada: sustituye a la radio BLE mientras no hay hardware\nnode.send([null, { action: \"subscribe\", topic: [{ topic: `${P}/sim/ble/${ID}`, qos: 0 }] }, null]);\nnode.send([null, null, { origen: \"arranque\" }]);\nnode.status({ fill: \"blue\", shape: \"ring\", text: `${P}/parada/${ID}/...` });\nreturn null;",
+        "outputs": 3,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 320,
+        "y": 80,
+        "wires": [
+            [
+                "par_mqtt_in"
+            ],
+            [
+                "par_mqtt_ble"
+            ],
+            [
+                "par_fn_firmware"
+            ]
+        ]
+    },
+    {
+        "id": "par_mqtt_in",
+        "type": "mqtt in",
+        "z": "tab_parada",
+        "name": "MQTT: aviso y proximos",
+        "topic": "",
+        "qos": "1",
+        "datatype": "auto-detect",
+        "broker": "par_broker",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 1,
+        "x": 570,
+        "y": 60,
+        "wires": [
+            [
+                "par_fn_firmware"
+            ]
+        ]
+    },
+    {
+        "id": "par_mqtt_ble",
+        "type": "mqtt in",
+        "z": "tab_parada",
+        "name": "Escáner BLE (aire simulado)",
+        "topic": "",
+        "qos": "1",
+        "datatype": "buffer",
+        "broker": "par_broker",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 1,
+        "x": 580,
+        "y": 120,
+        "wires": [
+            [
+                "par_fn_firmware"
+            ]
+        ]
+    },
+    {
+        "id": "par_c2",
+        "type": "comment",
+        "z": "tab_parada",
+        "name": "Sensor 1: rotary encoder (kit 37). El usuario gira para oír cada línea y pulsa para pedirla",
+        "info": "",
+        "x": 340,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "par_inj_giro_mas",
+        "type": "inject",
+        "z": "tab_parada",
+        "name": "Girar a la derecha (+1)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "1",
+        "payloadType": "str",
+        "x": 160,
+        "y": 240,
+        "wires": [
+            [
+                "par_fn_encoder"
+            ]
+        ]
+    },
+    {
+        "id": "par_inj_giro_menos",
+        "type": "inject",
+        "z": "tab_parada",
+        "name": "Girar a la izquierda (-1)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "-1",
+        "payloadType": "str",
+        "x": 160,
+        "y": 280,
+        "wires": [
+            [
+                "par_fn_encoder"
+            ]
+        ]
+    },
+    {
+        "id": "par_inj_pulsar",
+        "type": "inject",
+        "z": "tab_parada",
+        "name": "Pulsar el mando",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "pulsar",
+        "payloadType": "str",
+        "x": 130,
+        "y": 320,
+        "wires": [
+            [
+                "par_fn_encoder"
+            ]
+        ]
+    },
+    {
+        "id": "par_fn_encoder",
+        "type": "function",
+        "z": "tab_parada",
+        "name": "Rotary encoder (virtual)",
+        "func": "// ROTARY ENCODER KY-040 (virtual, n.º 37 del kit).\n// Entrega lo mismo que el driver del encoder real: un giro de un paso (+1 o -1)\n// o una pulsación del eje.\nlet pos = context.get(\"pos\") || 0;\nlet salida;\nif (msg.payload === \"pulsar\") {\n    salida = { pulsado: true };\n    node.status({ fill: \"green\", shape: \"dot\", text: `pulsado (posición ${pos})` });\n} else {\n    const giro = Number(msg.payload) < 0 ? -1 : 1;\n    pos += giro;\n    context.set(\"pos\", pos);\n    salida = { giro: giro, posicion: pos };\n    node.status({ fill: \"blue\", shape: \"dot\", text: `giro ${giro > 0 ? \"+1\" : \"-1\"} (posición ${pos})` });\n}\nreturn { origen: \"encoder\", payload: salida };",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 280,
+        "wires": [
+            [
+                "par_fn_firmware"
+            ]
+        ]
+    },
+    {
+        "id": "par_c3",
+        "type": "comment",
+        "z": "tab_parada",
+        "name": "Sensor 2: ultrasonidos HC-SR04 (kit 46). Mide la distancia en cm cada 0,5 s",
+        "info": "",
+        "x": 300,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "par_inj_veh_llega",
+        "type": "inject",
+        "z": "tab_parada",
+        "name": "Vehículo se detiene en la parada",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "mundo",
+        "payload": "detenido",
+        "payloadType": "str",
+        "x": 180,
+        "y": 440,
+        "wires": [
+            [
+                "par_fn_us"
+            ]
+        ]
+    },
+    {
+        "id": "par_inj_veh_va",
+        "type": "inject",
+        "z": "tab_parada",
+        "name": "Vehículo se va",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "mundo",
+        "payload": "libre",
+        "payloadType": "str",
+        "x": 130,
+        "y": 480,
+        "wires": [
+            [
+                "par_fn_us"
+            ]
+        ]
+    },
+    {
+        "id": "par_inj_muestreo",
+        "type": "inject",
+        "z": "tab_parada",
+        "name": "Muestreo 0,5 s",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "0.5",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "muestreo",
+        "payload": "",
+        "payloadType": "str",
+        "x": 130,
+        "y": 520,
+        "wires": [
+            [
+                "par_fn_us"
+            ]
+        ]
+    },
+    {
+        "id": "par_fn_us",
+        "type": "function",
+        "z": "tab_parada",
+        "name": "Ultrasonidos (virtual)",
+        "func": "// ULTRASONIDOS HC-SR04 (virtual, n.º 46 del kit).\n// Con cada muestreo entrega una distancia en cm, como el sensor real.\n// Los inject \"Vehículo se detiene\" y \"Vehículo se va\" cambian lo que hay delante.\nif (msg.topic === \"mundo\") {\n    context.set(\"vehiculo\", msg.payload === \"detenido\");\n    return null;\n}\nconst vehiculo = context.get(\"vehiculo\") || false;\n// Vehículo parado a unos 60 cm. Calzada vacía: cerca del alcance máximo (400 cm)\nconst base = vehiculo ? 60 : 395;\nconst cm = Math.round((base + (Math.random() - 0.5) * 8) * 10) / 10;\nnode.status({ fill: vehiculo ? \"green\" : \"grey\", shape: vehiculo ? \"dot\" : \"ring\",\n    text: `${cm} cm (${vehiculo ? \"vehículo delante\" : \"calzada libre\"})` });\nreturn { origen: \"ultrasonidos\", payload: { distancia_cm: cm } };",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 480,
+        "wires": [
+            [
+                "par_fn_firmware"
+            ]
+        ]
+    },
+    {
+        "id": "par_inj_tick",
+        "type": "inject",
+        "z": "tab_parada",
+        "name": "Tick 0,5 s",
+        "props": [
+            {
+                "p": "origen",
+                "v": "tick",
+                "vt": "str"
+            }
+        ],
+        "repeat": "0.5",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 420,
+        "y": 580,
+        "wires": [
+            [
+                "par_fn_firmware"
+            ]
+        ]
+    },
+    {
+        "id": "par_c4",
+        "type": "comment",
+        "z": "tab_parada",
+        "name": "Firmware de la parada (Raspberry Pi)",
+        "info": "",
+        "x": 760,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "par_fn_firmware",
+        "type": "function",
+        "z": "tab_parada",
+        "name": "Firmware parada",
+        "func": "// FIRMWARE DE LA PARADA (lo que hará la Raspberry Pi, diseño base).\n// Entradas: encoder, ultrasonidos, anuncios BLE, avisos y próximos por MQTT, y un tick.\n// Salida 1: MQTT. Salida 2: altavoz (texto que se diría por voz). Salida 3: trazas.\nconst P = env.get(\"TOPIC_PREFIX\");\nconst F = Number(env.get(\"FACTOR_TIEMPO\")) || 1;\nconst ID = env.get(\"PARADA_ID\");\nconst UMBRAL_CM = Number(env.get(\"UMBRAL_CM\")) || 150;            // por debajo hay un vehículo\nconst T_DETENCION_MS = Number(env.get(\"T_DETENCION_MS\")) || 1000; // tiempo seguido para darlo por detenido\nconst T = { ausencia: 120, proximosCaduca: 60 };                  // segundos del diseño, se dividen por F\n\nconst ahora = Date.now();\nconst mqtt = [], voz = [], trazas = [];\n\nlet st = flow.get(\"parada\");\nif (!st || msg.origen === \"arranque\") {\n    st = { usuario: null, proximos: null, menu: -1, menuLinea: null, solicitud: null,\n        us: { cerca: false, desde: 0, publicado: false } };\n}\nfunction pub(tema, payload) { mqtt.push({ topic: `${P}/parada/${ID}/${tema}`, payload: payload, qos: 1, retain: false }); }\nfunction decir(texto) { voz.push({ payload: texto }); }\nfunction traza(texto) { trazas.push({ payload: texto }); }\n\nfunction enMinutos(mins) {\n    const partes = mins.map(m => `en ${m}`);\n    const lista = partes.length > 1 ? `${partes.slice(0, -1).join(\", \")} y ${partes[partes.length - 1]}` : partes[0];\n    return `${lista} ${mins.length === 1 && mins[0] === 1 ? \"minuto\" : \"minutos\"}`;\n}\n// Opciones del menú: una por línea. Devuelve null si no hay una lista reciente de la nube.\nfunction opciones() {\n    if (!st.proximos || ahora / 1000 - st.proximos.ts > T.proximosCaduca / F + 3) return null;\n    const ops = [];\n    for (const b of st.proximos.buses) {\n        let o = ops.find(x => x.linea === b.linea);\n        if (!o) { o = { linea: b.linea, mins: [] }; ops.push(o); }\n        o.mins.push(b.min);\n    }\n    return ops;\n}\nfunction anunciar() {\n    const ops = opciones();\n    st.menu = -1; st.menuLinea = null;\n    if (ops === null) return decir(\"No hay información de autobuses en este momento.\");\n    if (!ops.length) return decir(\"No hay autobuses en los próximos 20 minutos.\");\n    decir(`Próximos autobuses: ${ops.map(o => `línea ${o.linea} ${enMinutos(o.mins)}`).join(\"; \")}. ` +\n        \"Gire el mando para elegir línea y púlselo para solicitarla.\");\n}\n\nconst base = `${P}/parada/${ID}/`;\nif (msg.origen === \"arranque\") {\n    traza(`Parada ${ID} arrancada`);\n} else if (msg.origen === \"tick\") {\n    // Más de 2 minutos sin baliza: la parada olvida al usuario, para anunciar de nuevo al siguiente\n    if (st.usuario && ahora - st.usuario.ultima > T.ausencia * 1000 / F) {\n        traza(\"Más de 2 min sin baliza: la parada queda libre para otro usuario\");\n        st.usuario = null; st.menu = -1; st.menuLinea = null;\n    }\n} else if (msg.topic === `${P}/sim/ble/${ID}`) {\n    // Anuncio BLE de 4 bytes: versión, tipo de asistencia e id\n    const b = msg.payload;\n    if (!Buffer.isBuffer(b) || b.length !== 4 || b[0] !== 1 || (b[1] !== 1 && b[1] !== 2)) {\n        traza(\"Anuncio BLE descartado: no tiene el formato de la baliza\");\n    } else if (!st.usuario) {\n        // La primera baliza da al usuario por presente, sin umbral de señal (S5)\n        st.usuario = { asistencia: b[1] === 1 ? \"visual\" : \"movilidad\", ultima: ahora };\n        traza(`Baliza recibida (${st.usuario.asistencia}): usuario presente`);\n        anunciar();\n    } else {\n        st.usuario.ultima = ahora;\n    }\n} else if (msg.origen === \"encoder\") {\n    const e = msg.payload;\n    if (!st.usuario) {\n        traza(\"Encoder ignorado: no hay ningún usuario presente\");\n    } else if (e.giro) {\n        const ops = opciones();\n        if (ops === null) decir(\"No hay información de autobuses en este momento.\");\n        else if (!ops.length) decir(\"No hay autobuses en los próximos 20 minutos.\");\n        else {\n            const n = ops.length;\n            st.menu = st.menu < 0 ? (e.giro > 0 ? 0 : n - 1) : (((st.menu + e.giro) % n) + n) % n;\n            st.menuLinea = ops[st.menu].linea;\n            decir(`Línea ${ops[st.menu].linea}, ${enMinutos(ops[st.menu].mins)}.`);\n        }\n    } else if (e.pulsado) {\n        if (st.solicitud) decir(`Ya tiene solicitada la línea ${st.solicitud.linea}.`);\n        else if (st.menuLinea === null) anunciar();   // sin línea elegida: repite la lista\n        else {\n            const id = \"S-\" + Math.floor(Math.random() * 0x10000).toString(16).padStart(4, \"0\");\n            st.solicitud = { id: id, linea: st.menuLinea, estado: \"enviada\" };\n            pub(\"solicitud\", { solicitud: id, linea: st.menuLinea, asistencia: st.usuario.asistencia });\n            decir(`Solicitando línea ${st.menuLinea}.`);\n            st.menu = -1; st.menuLinea = null;\n        }\n    }\n} else if (msg.origen === \"ultrasonidos\") {\n    const cm = msg.payload.distancia_cm;\n    const cerca = cm < UMBRAL_CM;\n    if (cerca !== st.us.cerca) { st.us.cerca = cerca; st.us.desde = ahora; }\n    if (cerca !== st.us.publicado && ahora - st.us.desde >= T_DETENCION_MS) {\n        st.us.publicado = cerca;\n        pub(\"deteccion\", { estado: cerca ? \"detenido\" : \"libre\", distancia_cm: Math.round(cm) });\n        traza(`Ultrasonidos: ${Math.round(cm)} cm, vehículo ${cerca ? \"detenido\" : \"fuera\"}`);\n    }\n} else if (msg.topic === base + \"proximos\") {\n    const p = msg.payload;\n    st.proximos = (p && typeof p === \"object\" && Array.isArray(p.buses)) ? { ts: p.ts, buses: p.buses } : null;\n} else if (msg.topic === base + \"aviso\") {\n    const a = msg.payload;\n    if (a && typeof a === \"object\" && st.solicitud && a.solicitud === st.solicitud.id) {\n        if (a.tipo === \"asignado\") { st.solicitud.estado = \"asignada\"; decir(`Línea ${a.linea} avisada.`); }\n        else if (a.tipo === \"llegado\") { st.solicitud.estado = \"en parada\"; decir(`Su autobús de la línea ${a.linea} ha llegado.`); }\n        else if (a.tipo === \"cerrada\") { st.solicitud = null; traza(`Solicitud ${a.solicitud} cerrada`); }\n    }\n}\n\nflow.set(\"parada\", st);\nconst partes = [st.usuario ? `usuario presente (${st.usuario.asistencia})` : \"sin usuario\"];\nif (st.solicitud) partes.push(`solicitud ${st.solicitud.linea}: ${st.solicitud.estado}`);\nif (st.us.publicado) partes.push(\"vehículo detenido\");\nnode.status({ fill: st.usuario ? \"green\" : \"grey\", shape: st.usuario ? \"dot\" : \"ring\", text: partes.join(\" | \") });\nreturn [mqtt, voz, trazas];",
+        "outputs": 3,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 740,
+        "y": 280,
+        "wires": [
+            [
+                "par_mqtt_out",
+                "par_dbg_out"
+            ],
+            [
+                "par_dbg_altavoz"
+            ],
+            [
+                "par_dbg_traza"
+            ]
+        ]
+    },
+    {
+        "id": "par_mqtt_out",
+        "type": "mqtt out",
+        "z": "tab_parada",
+        "name": "MQTT hacia la nube",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "par_broker",
+        "x": 1060,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "par_dbg_out",
+        "type": "debug",
+        "z": "tab_parada",
+        "name": "MQTT enviado",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1050,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "par_c5",
+        "type": "comment",
+        "z": "tab_parada",
+        "name": "Actuador 4: altavoz. Muestra la frase que se diría",
+        "info": "",
+        "x": 1050,
+        "y": 370,
+        "wires": []
+    },
+    {
+        "id": "par_dbg_altavoz",
+        "type": "debug",
+        "z": "tab_parada",
+        "name": "Altavoz",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "msg",
+        "x": 1130,
+        "y": 410,
+        "wires": []
+    },
+    {
+        "id": "par_dbg_traza",
+        "type": "debug",
+        "z": "tab_parada",
+        "name": "Traza parada",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1050,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "par_c6",
+        "type": "comment",
+        "z": "tab_parada",
+        "name": "Dashboard: mando y vehículo",
+        "info": "",
+        "x": 170,
+        "y": 660,
+        "wires": []
+    },
+    {
+        "id": "par_ui_giro_menos",
+        "type": "ui-button",
+        "z": "tab_parada",
+        "group": "ui_g_sim",
+        "name": "Girar mando -1",
+        "label": "Girar mando -1",
+        "order": 4,
+        "width": 2,
+        "height": 1,
+        "emulateClick": false,
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "iconPosition": "left",
+        "payload": "-1",
+        "payloadType": "str",
+        "topic": "",
+        "topicType": "str",
+        "buttonColor": "",
+        "textColor": "",
+        "iconColor": "",
+        "enableClick": true,
+        "enablePointerdown": false,
+        "pointerdownPayload": "",
+        "pointerdownPayloadType": "str",
+        "enablePointerup": false,
+        "pointerupPayload": "",
+        "pointerupPayloadType": "str",
+        "x": 150,
+        "y": 700,
+        "wires": [
+            [
+                "par_fn_encoder"
+            ]
+        ]
+    },
+    {
+        "id": "par_ui_giro_mas",
+        "type": "ui-button",
+        "z": "tab_parada",
+        "group": "ui_g_sim",
+        "name": "Girar mando +1",
+        "label": "Girar mando +1",
+        "order": 5,
+        "width": 2,
+        "height": 1,
+        "emulateClick": false,
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "iconPosition": "left",
+        "payload": "1",
+        "payloadType": "str",
+        "topic": "",
+        "topicType": "str",
+        "buttonColor": "",
+        "textColor": "",
+        "iconColor": "",
+        "enableClick": true,
+        "enablePointerdown": false,
+        "pointerdownPayload": "",
+        "pointerdownPayloadType": "str",
+        "enablePointerup": false,
+        "pointerupPayload": "",
+        "pointerupPayloadType": "str",
+        "x": 150,
+        "y": 740,
+        "wires": [
+            [
+                "par_fn_encoder"
+            ]
+        ]
+    },
+    {
+        "id": "par_ui_pulsar",
+        "type": "ui-button",
+        "z": "tab_parada",
+        "group": "ui_g_sim",
+        "name": "Pulsar el mando",
+        "label": "Pulsar el mando",
+        "order": 6,
+        "width": 4,
+        "height": 1,
+        "emulateClick": false,
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "iconPosition": "left",
+        "payload": "pulsar",
+        "payloadType": "str",
+        "topic": "",
+        "topicType": "str",
+        "buttonColor": "",
+        "textColor": "",
+        "iconColor": "",
+        "enableClick": true,
+        "enablePointerdown": false,
+        "pointerdownPayload": "",
+        "pointerdownPayloadType": "str",
+        "enablePointerup": false,
+        "pointerupPayload": "",
+        "pointerupPayloadType": "str",
+        "x": 150,
+        "y": 780,
+        "wires": [
+            [
+                "par_fn_encoder"
+            ]
+        ]
+    },
+    {
+        "id": "par_ui_veh_llega",
+        "type": "ui-button",
+        "z": "tab_parada",
+        "group": "ui_g_sim",
+        "name": "Vehículo se detiene",
+        "label": "Vehículo se detiene",
+        "order": 7,
+        "width": 2,
+        "height": 1,
+        "emulateClick": false,
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "iconPosition": "left",
+        "payload": "detenido",
+        "payloadType": "str",
+        "topic": "mundo",
+        "topicType": "str",
+        "buttonColor": "",
+        "textColor": "",
+        "iconColor": "",
+        "enableClick": true,
+        "enablePointerdown": false,
+        "pointerdownPayload": "",
+        "pointerdownPayloadType": "str",
+        "enablePointerup": false,
+        "pointerupPayload": "",
+        "pointerupPayloadType": "str",
+        "x": 160,
+        "y": 820,
+        "wires": [
+            [
+                "par_fn_us"
+            ]
+        ]
+    },
+    {
+        "id": "par_ui_veh_va",
+        "type": "ui-button",
+        "z": "tab_parada",
+        "group": "ui_g_sim",
+        "name": "Vehículo se va",
+        "label": "Vehículo se va",
+        "order": 8,
+        "width": 2,
+        "height": 1,
+        "emulateClick": false,
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "iconPosition": "left",
+        "payload": "libre",
+        "payloadType": "str",
+        "topic": "mundo",
+        "topicType": "str",
+        "buttonColor": "",
+        "textColor": "",
+        "iconColor": "",
+        "enableClick": true,
+        "enablePointerdown": false,
+        "pointerdownPayload": "",
+        "pointerdownPayloadType": "str",
+        "enablePointerup": false,
+        "pointerupPayload": "",
+        "pointerupPayloadType": "str",
+        "x": 150,
+        "y": 860,
+        "wires": [
+            [
+                "par_fn_us"
+            ]
+        ]
+    },
+    {
+        "id": "c8adc05d4ce7c4dd",
+        "type": "openweathermap",
+        "z": "tab_parada",
+        "name": "Open Weather Map: Vigo",
+        "wtype": "current",
+        "lon": "",
+        "lat": "",
+        "city": "Vigo",
+        "country": "Spain",
+        "language": "es",
+        "x": 620,
+        "y": 700,
+        "wires": [
+            [
+                "b553171435033076"
+            ]
+        ]
+    },
+    {
+        "id": "par_c7",
+        "type": "comment",
+        "z": "tab_parada",
+        "name": "API externa: Open Weather Map (ejercicio 4). Avisa por el altavoz si el suelo está mojado",
+        "info": "",
+        "x": 720,
+        "y": 650,
+        "wires": []
+    },
+    {
+        "id": "f108bff086dc8b35",
+        "type": "inject",
+        "z": "tab_parada",
+        "name": "Cada 30 s",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "30",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "1",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 420,
+        "y": 700,
+        "wires": [
+            [
+                "c8adc05d4ce7c4dd"
+            ]
+        ]
+    },
+    {
+        "id": "b553171435033076",
+        "type": "function",
+        "z": "tab_parada",
+        "name": "Transformar tiempo en mensaje",
+        "func": "// TIEMPO -> AVISO DE SUELO MOJADO POR EL ALTAVOZ\n// Entrada: salida del nodo openweathermap\n//   msg.payload -> datos resumidos (weather, detail, tempc...)\n//   msg.data    -> respuesta completa de la API\n// Salida: msg.payload con la frase para el altavoz.\n// Solo habla si hay un usuario en la parada y una vez por usuario,\n// para no repetir el aviso en cada consulta a la API.\n\nconst datos = msg.data || {};\nconst resumen = msg.payload || {};\n\n// Código de condición de OpenWeatherMap: 2xx tormenta, 3xx llovizna, 5xx lluvia, 6xx nieve\nconst codigo = (datos.weather && datos.weather[0] && datos.weather[0].id) || 0;\nconst grupo = Math.floor(codigo / 100);\n// Lluvia acumulada (mm) en la última hora o en las últimas 3 horas\nconst lluviaMm = (datos.rain && (datos.rain[\"1h\"] || datos.rain[\"3h\"])) || 0;\nconst temp = resumen.tempc;\n\nlet aviso = null;\nif (grupo === 6) aviso = \"Atención: está nevando, el suelo puede estar resbaladizo.\";\nelse if (grupo === 2) aviso = \"Atención: hay tormenta, el suelo está mojado. Tenga cuidado al subir al autobús.\";\nelse if (grupo === 5 || grupo === 3) aviso = \"Atención: está lloviendo, el suelo puede estar resbaladizo. Tenga cuidado al subir al autobús.\";\nelse if (lluviaMm > 0) aviso = \"Atención: ha llovido recientemente, el suelo puede estar mojado.\";\n\n// Suelo mojado y temperatura bajo cero: posible hielo\nif (aviso && typeof temp === \"number\" && temp <= 0) aviso += \" Puede haber hielo.\";\n\nflow.set(\"avisoSuelo\", aviso);\n\n// Estado de la parada que mantiene el nodo \"Firmware parada\"\nconst parada = flow.get(\"parada\");\nconst hayUsuario = !!(parada && parada.usuario);\nif (!hayUsuario) flow.set(\"avisoSueloDicho\", false);   // el siguiente usuario lo volverá a oír\n\nnode.status(aviso\n    ? { fill: \"blue\", shape: \"dot\", text: `suelo mojado (${resumen.detail || codigo})` }\n    : { fill: \"green\", shape: \"dot\", text: `suelo seco (${resumen.detail || codigo})` });\n\nif (!aviso || !hayUsuario || flow.get(\"avisoSueloDicho\")) return null;\n\nflow.set(\"avisoSueloDicho\", true);\nmsg.payload = aviso;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 920,
+        "y": 700,
+        "wires": [
+            [
+                "par_dbg_altavoz"
+            ]
+        ]
+    },
+    {
+        "id": "aut312_c1",
+        "type": "comment",
+        "z": "tab_aut312",
+        "name": "Conexión MQTT del autobús",
+        "info": "",
+        "x": 280,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "aut312_inj_arranque",
+        "type": "inject",
+        "z": "tab_aut312",
+        "name": "Arranque",
+        "props": [
+            {
+                "p": "origen",
+                "v": "arranque",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.5,
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 120,
+        "y": 80,
+        "wires": [
+            [
+                "aut312_fn_conectar"
+            ]
+        ]
+    },
+    {
+        "id": "aut312_fn_conectar",
+        "type": "function",
+        "z": "tab_aut312",
+        "name": "Conectar y suscribir",
+        "func": "// Conecta el autobús al broker y se suscribe a su asignación y a sus órdenes.\n// BUS_ID es una variable de entorno de la pestaña.\nconst P = env.get(\"TOPIC_PREFIX\");\nconst B = env.get(\"BUS_ID\");\nnode.send([{ action: \"connect\", broker: {\n    broker: env.get(\"MQTT_BROKER\"), port: Number(env.get(\"MQTT_PORT\")),\n    clientid: \"\", cleansession: true, force: true\n} }, null]);\nnode.send([{ action: \"subscribe\", topic: [\n    { topic: `${P}/autobus/${B}/asistencia`, qos: 1 },\n    { topic: `${P}/autobus/${B}/orden`, qos: 1 }\n] }, null]);\nnode.send([null, { origen: \"arranque\" }]);\nnode.status({ fill: \"blue\", shape: \"ring\", text: `${P}/autobus/${B}/...` });\nreturn null;",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 320,
+        "y": 80,
+        "wires": [
+            [
+                "aut312_mqtt_in"
+            ],
+            [
+                "aut312_fn_firmware"
+            ]
+        ]
+    },
+    {
+        "id": "aut312_mqtt_in",
+        "type": "mqtt in",
+        "z": "tab_aut312",
+        "name": "MQTT: asistencia y orden",
+        "topic": "",
+        "qos": "1",
+        "datatype": "auto-detect",
+        "broker": "aut312_broker",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 1,
+        "x": 580,
+        "y": 60,
+        "wires": [
+            [
+                "aut312_fn_firmware"
+            ]
+        ]
+    },
+    {
+        "id": "aut312_c2",
+        "type": "comment",
+        "z": "tab_aut312",
+        "name": "Sensor 3: pulsador del conductor (kit 7). Confirma que la persona ha subido",
+        "info": "",
+        "x": 300,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "aut312_inj_pulsar",
+        "type": "inject",
+        "z": "tab_aut312",
+        "name": "Conductor pulsa el botón",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "pulsar",
+        "payloadType": "str",
+        "x": 160,
+        "y": 240,
+        "wires": [
+            [
+                "aut312_fn_pulsador"
+            ]
+        ]
+    },
+    {
+        "id": "aut312_fn_pulsador",
+        "type": "function",
+        "z": "tab_aut312",
+        "name": "Pulsador (virtual)",
+        "func": "// PULSADOR DEL CONDUCTOR (virtual, Digital Push Button n.º 7 del kit).\n// Entrega una pulsación, como el botón real ya sin rebotes.\nconst n = (context.get(\"n\") || 0) + 1;\ncontext.set(\"n\", n);\nnode.status({ fill: \"green\", shape: \"dot\", text: `pulsado (${n})` });\nreturn { origen: \"pulsador\", payload: { pulsado: true } };",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 240,
+        "wires": [
+            [
+                "aut312_fn_firmware"
+            ]
+        ]
+    },
+    {
+        "id": "aut312_c3",
+        "type": "comment",
+        "z": "tab_aut312",
+        "name": "Firmware del autobús (ESP32)",
+        "info": "",
+        "x": 700,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "aut312_fn_firmware",
+        "type": "function",
+        "z": "tab_aut312",
+        "name": "Firmware autobús",
+        "func": "// FIRMWARE DEL AUTOBÚS (lo que hará el ESP32, diseño base).\n// Entradas: asignación y órdenes por MQTT, y el pulsador del conductor.\n// Salidas: 1 MQTT, 2 LCD 8x2, 3 zumbador, 4 servo de la rampa, 5 trazas.\nconst P = env.get(\"TOPIC_PREFIX\");\nconst B = env.get(\"BUS_ID\");\nconst mqtt = [], trazas = [];\nconst arranque = msg.origen === \"arranque\";\n\nlet st = flow.get(\"bus\");\nif (!st || arranque) st = { asistencia: null, enServicio: false, zumbador: false, rampa: false, lcd: \"\" };\nconst antes = { zumbador: st.zumbador, rampa: st.rampa, lcd: st.lcd };\nfunction traza(texto) { trazas.push({ payload: `${B}: ${texto}` }); }\nfunction parar() { st.zumbador = false; st.rampa = false; st.enServicio = false; }\n\nconst base = `${P}/autobus/${B}/`;\nif (arranque) {\n    traza(\"arrancado\");\n} else if (msg.origen === \"pulsador\") {\n    // El conductor confirma que la persona ha subido\n    if (st.enServicio && st.asistencia) {\n        const solicitud = st.asistencia.solicitud;\n        parar();\n        mqtt.push({ topic: base + \"evento\", payload: { tipo: \"recogido\", solicitud: solicitud }, qos: 1, retain: false });\n        traza(`pulsador: recogida confirmada (${solicitud})`);\n    } else {\n        traza(\"pulsador ignorado: no hay ningún servicio en curso\");\n    }\n} else if (msg.topic === base + \"asistencia\") {\n    const p = msg.payload;\n    if (p && typeof p === \"object\" && !Buffer.isBuffer(p) && p.solicitud) {\n        st.asistencia = p;\n        traza(`asignación: ${p.parada} ${p.linea}, ${p.asistencia}`);\n    } else {\n        // Retenido borrado: ya no hay solicitud\n        if (st.asistencia) traza(\"asignación retirada\");\n        st.asistencia = null;\n        parar();\n    }\n} else if (msg.topic === base + \"orden\") {\n    const o = msg.payload;\n    // Solo se obedecen las órdenes de la solicitud asignada\n    if (o && typeof o === \"object\" && st.asistencia && o.solicitud === st.asistencia.solicitud) {\n        if (o.tipo === \"guiar\") { st.zumbador = true; st.enServicio = true; }\n        else if (o.tipo === \"rampa\") { st.rampa = true; st.enServicio = true; }\n        else if (o.tipo === \"fin\") parar();\n        traza(`orden ${o.tipo} (${o.solicitud})`);\n    }\n}\n\n// LCD 0802: 2 líneas de 8 caracteres\nif (st.asistencia) {\n    const l1 = `${st.asistencia.parada} ${st.asistencia.linea}`.slice(0, 8).padEnd(8);\n    const l2 = (st.asistencia.asistencia === \"movilidad\" ? \"RAMPA\" : \"VISUAL\").padEnd(8);\n    st.lcd = `[${l1}][${l2}]`;\n} else {\n    st.lcd = \"[        ][        ]\";\n}\nflow.set(\"bus\", st);\n\nconst salLcd = (arranque || st.lcd !== antes.lcd) ? { payload: st.lcd } : null;\nconst salZum = (arranque || st.zumbador !== antes.zumbador) ? { payload: st.zumbador ? \"SONANDO\" : \"apagado\" } : null;\nconst salServo = (arranque || st.rampa !== antes.rampa) ? { payload: st.rampa ? \"90 grados, rampa desplegada\" : \"0 grados, rampa recogida\" } : null;\nnode.status({ fill: st.enServicio ? \"green\" : (st.asistencia ? \"yellow\" : \"grey\"), shape: st.asistencia ? \"dot\" : \"ring\",\n    text: st.asistencia ? `${st.asistencia.parada} ${st.asistencia.linea}${st.enServicio ? \" | en servicio\" : \"\"}` : \"sin asignación\" });\nreturn [mqtt, salLcd, salZum, salServo, trazas];",
+        "outputs": 5,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 700,
+        "y": 240,
+        "wires": [
+            [
+                "aut312_mqtt_out",
+                "aut312_dbg_out"
+            ],
+            [
+                "aut312_dbg_lcd"
+            ],
+            [
+                "aut312_dbg_zumbador"
+            ],
+            [
+                "aut312_dbg_servo"
+            ],
+            [
+                "aut312_dbg_traza"
+            ]
+        ]
+    },
+    {
+        "id": "aut312_mqtt_out",
+        "type": "mqtt out",
+        "z": "tab_aut312",
+        "name": "MQTT hacia la nube",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "aut312_broker",
+        "x": 950,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "aut312_dbg_out",
+        "type": "debug",
+        "z": "tab_aut312",
+        "name": "MQTT enviado",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 940,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "aut312_c4",
+        "type": "comment",
+        "z": "tab_aut312",
+        "name": "Actuadores: muestran en su estado lo que harían",
+        "info": "",
+        "x": 1010,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "aut312_dbg_lcd",
+        "type": "debug",
+        "z": "tab_aut312",
+        "name": "LCD 8x2 AUT312",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "msg",
+        "x": 930,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "aut312_dbg_zumbador",
+        "type": "debug",
+        "z": "tab_aut312",
+        "name": "Zumbador AUT312",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "msg",
+        "x": 940,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "aut312_dbg_servo",
+        "type": "debug",
+        "z": "tab_aut312",
+        "name": "Servo rampa AUT312",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "msg",
+        "x": 950,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "aut312_dbg_traza",
+        "type": "debug",
+        "z": "tab_aut312",
+        "name": "Traza AUT312",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 930,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "aut312_c5",
+        "type": "comment",
+        "z": "tab_aut312",
+        "name": "Dashboard: el mismo botón",
+        "info": "",
+        "x": 150,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "aut312_ui_pulsar",
+        "type": "ui-button",
+        "z": "tab_aut312",
+        "group": "ui_g_sim",
+        "name": "Pulsador del conductor",
+        "label": "Pulsador del conductor",
+        "order": 9,
+        "width": 4,
+        "height": 1,
+        "emulateClick": false,
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "iconPosition": "left",
+        "payload": "pulsar",
+        "payloadType": "str",
+        "topic": "",
+        "topicType": "str",
+        "buttonColor": "",
+        "textColor": "",
+        "iconColor": "",
+        "enableClick": true,
+        "enablePointerdown": false,
+        "pointerdownPayload": "",
+        "pointerdownPayloadType": "str",
+        "enablePointerup": false,
+        "pointerupPayload": "",
+        "pointerupPayloadType": "str",
+        "x": 170,
+        "y": 360,
+        "wires": [
+            [
+                "aut312_fn_pulsador"
+            ]
+        ]
+    },
+    {
+        "id": "dis_c1",
+        "type": "comment",
+        "z": "tab_dispositivo",
+        "name": "El usuario llega a la parada o se va. La baliza emite siempre (S5), pero solo se recibe si está en la parada",
+        "info": "",
+        "x": 400,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "dis_inj_arranque",
+        "type": "inject",
+        "z": "tab_dispositivo",
+        "name": "Arranque",
+        "props": [
+            {
+                "p": "origen",
+                "v": "arranque",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.5,
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 120,
+        "y": 80,
+        "wires": [
+            [
+                "dis_fn_conectar"
+            ]
+        ]
+    },
+    {
+        "id": "dis_fn_conectar",
+        "type": "function",
+        "z": "tab_dispositivo",
+        "name": "Conectar",
+        "func": "// Conexión que hace de \"aire\" para la baliza BLE mientras no hay radio real.\n// Sin LWT: una baliza no se conecta a nada, solo emite.\nnode.send([{ action: \"connect\", broker: {\n    broker: env.get(\"MQTT_BROKER\"), port: Number(env.get(\"MQTT_PORT\")),\n    clientid: \"\", cleansession: true, force: true\n} }, null]);\nnode.send([null, { origen: \"arranque\" }]);\nreturn null;",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 300,
+        "y": 80,
+        "wires": [
+            [
+                "dis_mqtt_out"
+            ],
+            [
+                "dis_fn_baliza"
+            ]
+        ]
+    },
+    {
+        "id": "dis_inj_llega_visual",
+        "type": "inject",
+        "z": "tab_dispositivo",
+        "name": "Llega a la parada con bastón (visual)",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "origen",
+                "v": "llega",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "visual",
+        "payloadType": "str",
+        "x": 190,
+        "y": 160,
+        "wires": [
+            [
+                "dis_fn_baliza"
+            ]
+        ]
+    },
+    {
+        "id": "dis_inj_llega_movilidad",
+        "type": "inject",
+        "z": "tab_dispositivo",
+        "name": "Llega a la parada en silla (movilidad)",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "origen",
+                "v": "llega",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "movilidad",
+        "payloadType": "str",
+        "x": 190,
+        "y": 200,
+        "wires": [
+            [
+                "dis_fn_baliza"
+            ]
+        ]
+    },
+    {
+        "id": "dis_inj_se_va",
+        "type": "inject",
+        "z": "tab_dispositivo",
+        "name": "Se va de la parada (o sube al autobús)",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "origen",
+                "v": "se_va",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 190,
+        "y": 240,
+        "wires": [
+            [
+                "dis_fn_baliza"
+            ]
+        ]
+    },
+    {
+        "id": "dis_inj_tick",
+        "type": "inject",
+        "z": "tab_dispositivo",
+        "name": "Reloj 0,1 s",
+        "props": [
+            {
+                "p": "origen",
+                "v": "tick",
+                "vt": "str"
+            }
+        ],
+        "repeat": "0.1",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 120,
+        "y": 300,
+        "wires": [
+            [
+                "dis_fn_baliza"
+            ]
+        ]
+    },
+    {
+        "id": "dis_fn_baliza",
+        "type": "function",
+        "z": "tab_dispositivo",
+        "name": "Baliza BLE (ESP32 virtual)",
+        "func": "// DISPOSITIVO DE USUARIO (ESP32 virtual en el bastón o en la silla).\n// Emite un anuncio BLE de 4 bytes cada 10 s, siempre (S5). No escucha nada.\n// \"Llega\" y \"se va\" solo deciden si la parada está al alcance de la radio.\n// Salida 1: anuncio hacia el aire simulado. Salida 2: trazas.\nconst P = env.get(\"TOPIC_PREFIX\");\nconst F = Number(env.get(\"FACTOR_TIEMPO\")) || 1;\nconst ID = Number(env.get(\"DISPOSITIVO_ID\")) || 7;   // 0x0007 es D07\nconst PARADA = env.get(\"PARADA_CERCANA\");\nconst PERIODO_MS = 10000 / F;\n\nlet st = context.get(\"st\");\nif (!st || msg.origen === \"arranque\") st = { enParada: false, tipo: 1, ultima: 0, n: 0 };\nconst ahora = Date.now();\nlet anuncio = null, traza = null;\nconst origen = msg.origen || msg.topic;   // inject (origen) o botón del panel (topic)\n\nif (origen === \"llega\") {\n    st.enParada = true;\n    st.tipo = msg.payload === \"movilidad\" ? 2 : 1;   // 1 visual (bastón), 2 movilidad (silla)\n    traza = { payload: `D${String(ID).padStart(2, \"0\")} llega a ${PARADA} (${st.tipo === 1 ? \"visual\" : \"movilidad\"})` };\n} else if (origen === \"se_va\") {\n    st.enParada = false;\n    traza = { payload: `D${String(ID).padStart(2, \"0\")} se va de ${PARADA}` };\n} else if (origen === \"tick\" && ahora - st.ultima >= PERIODO_MS) {\n    st.ultima = ahora;\n    st.n += 1;\n    if (st.enParada) {\n        // service data: versión, tipo de asistencia e id en 16 bits\n        const buf = Buffer.from([1, st.tipo, (ID >> 8) & 0xff, ID & 0xff]);\n        anuncio = { topic: `${P}/sim/ble/${PARADA}`, payload: buf, qos: 0, retain: false };\n    }\n}\ncontext.set(\"st\", st);\n\nconst hex = [1, st.tipo, (ID >> 8) & 0xff, ID & 0xff].map(b => b.toString(16).padStart(2, \"0\")).join(\" \");\nnode.status(st.enParada\n    ? { fill: \"green\", shape: \"dot\", text: `en ${PARADA} | baliza n.º ${st.n} [${hex}] cada ${Math.round(PERIODO_MS / 100) / 10} s` }\n    : { fill: \"grey\", shape: \"ring\", text: `lejos de la parada | baliza n.º ${st.n} [${hex}], nadie la recibe` });\n\nreturn [anuncio, traza];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 200,
+        "wires": [
+            [
+                "dis_mqtt_out"
+            ],
+            [
+                "dis_dbg_traza"
+            ]
+        ]
+    },
+    {
+        "id": "dis_mqtt_out",
+        "type": "mqtt out",
+        "z": "tab_dispositivo",
+        "name": "Aire BLE simulado (sim/ble)",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "dis_broker",
+        "x": 800,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "dis_dbg_traza",
+        "type": "debug",
+        "z": "tab_dispositivo",
+        "name": "Traza dispositivo",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 770,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "dis_c2",
+        "type": "comment",
+        "z": "tab_dispositivo",
+        "name": "Dashboard: los mismos tres botones",
+        "info": "",
+        "x": 190,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "dis_ui_visual",
+        "type": "ui-button",
+        "z": "tab_dispositivo",
+        "group": "ui_g_sim",
+        "name": "Llega con bastón",
+        "label": "Llega con bastón",
+        "order": 1,
+        "width": 2,
+        "height": 1,
+        "emulateClick": false,
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "iconPosition": "left",
+        "payload": "visual",
+        "payloadType": "str",
+        "topic": "llega",
+        "topicType": "str",
+        "buttonColor": "",
+        "textColor": "",
+        "iconColor": "",
+        "enableClick": true,
+        "enablePointerdown": false,
+        "pointerdownPayload": "",
+        "pointerdownPayloadType": "str",
+        "enablePointerup": false,
+        "pointerupPayload": "",
+        "pointerupPayloadType": "str",
+        "x": 150,
+        "y": 420,
+        "wires": [
+            [
+                "dis_fn_baliza"
+            ]
+        ]
+    },
+    {
+        "id": "dis_ui_movilidad",
+        "type": "ui-button",
+        "z": "tab_dispositivo",
+        "group": "ui_g_sim",
+        "name": "Llega en silla",
+        "label": "Llega en silla",
+        "order": 2,
+        "width": 2,
+        "height": 1,
+        "emulateClick": false,
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "iconPosition": "left",
+        "payload": "movilidad",
+        "payloadType": "str",
+        "topic": "llega",
+        "topicType": "str",
+        "buttonColor": "",
+        "textColor": "",
+        "iconColor": "",
+        "enableClick": true,
+        "enablePointerdown": false,
+        "pointerdownPayload": "",
+        "pointerdownPayloadType": "str",
+        "enablePointerup": false,
+        "pointerupPayload": "",
+        "pointerupPayloadType": "str",
+        "x": 140,
+        "y": 460,
+        "wires": [
+            [
+                "dis_fn_baliza"
+            ]
+        ]
+    },
+    {
+        "id": "dis_ui_se_va",
+        "type": "ui-button",
+        "z": "tab_dispositivo",
+        "group": "ui_g_sim",
+        "name": "El usuario se va o sube al autobús",
+        "label": "El usuario se va o sube al autobús",
+        "order": 3,
+        "width": 4,
+        "height": 1,
+        "emulateClick": false,
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "iconPosition": "left",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "se_va",
+        "topicType": "str",
+        "buttonColor": "",
+        "textColor": "",
+        "iconColor": "",
+        "enableClick": true,
+        "enablePointerdown": false,
+        "pointerdownPayload": "",
+        "pointerdownPayloadType": "str",
+        "enablePointerup": false,
+        "pointerupPayload": "",
+        "pointerupPayloadType": "str",
+        "x": 200,
+        "y": 500,
+        "wires": [
+            [
+                "dis_fn_baliza"
+            ]
+        ]
+    },
+    {
+        "id": "pan_c1",
+        "type": "comment",
+        "z": "tab_panel",
+        "name": "Conexión MQTT del panel: solo se suscribe, no publica",
+        "info": "",
+        "x": 240,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "pan_inj_arranque",
+        "type": "inject",
+        "z": "tab_panel",
+        "name": "Arranque",
+        "props": [
+            {
+                "p": "origen",
+                "v": "arranque",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.5,
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 120,
+        "y": 80,
+        "wires": [
+            [
+                "pan_fn_conectar"
+            ]
+        ]
+    },
+    {
+        "id": "pan_fn_conectar",
+        "type": "function",
+        "z": "tab_panel",
+        "name": "Conectar y suscribir",
+        "func": "// Conecta el panel al broker y se suscribe a todo lo que publican la nube,\n// la parada y el autobús. El panel solo escucha: no publica nada.\nconst P = env.get(\"TOPIC_PREFIX\");\nconst ID = env.get(\"PARADA_ID\");\nnode.send([{ action: \"connect\", broker: {\n    broker: env.get(\"MQTT_BROKER\"), port: Number(env.get(\"MQTT_PORT\")),\n    clientid: \"\", cleansession: true, force: true\n} }, null]);\nnode.send([{ action: \"subscribe\", topic: [\n    `${P}/parada/${ID}/+`, `${P}/autobus/+/asistencia`, `${P}/autobus/+/orden`, `${P}/autobus/+/evento`\n].map(t => ({ topic: t, qos: 1 })) }, null]);\nnode.send([null, { origen: \"arranque\" }]);\nnode.status({ fill: \"blue\", shape: \"ring\", text: `escucha ${P}/parada/${ID}/+ y ${P}/autobus/+/...` });\nreturn null;",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 320,
+        "y": 80,
+        "wires": [
+            [
+                "pan_mqtt_in"
+            ],
+            [
+                "pan_fn_modelo"
+            ]
+        ]
+    },
+    {
+        "id": "pan_mqtt_in",
+        "type": "mqtt in",
+        "z": "tab_panel",
+        "name": "MQTT de la parada y el autobús",
+        "topic": "",
+        "qos": "1",
+        "datatype": "auto-detect",
+        "broker": "pan_broker",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 1,
+        "x": 590,
+        "y": 60,
+        "wires": [
+            [
+                "pan_fn_modelo"
+            ]
+        ]
+    },
+    {
+        "id": "pan_c2",
+        "type": "comment",
+        "z": "tab_panel",
+        "name": "Modelo del panel: convierte los mensajes MQTT en lo que muestra cada widget",
+        "info": "",
+        "x": 330,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "pan_fn_modelo",
+        "type": "function",
+        "z": "tab_panel",
+        "name": "Modelo del panel",
+        "func": "// MODELO DEL PANEL.\n// Reconstruye el estado del sistema solo con lo que se oye por MQTT y lo reparte\n// a los widgets. No usa nada de las demás pestañas.\n// Salidas: 1 solicitud, 2 último aviso, 3 ultrasonidos, 4 próximos (texto),\n// 5 galga, 6 gráfica de minutos, 7 gráfica de estado, 8 gráfica de cierres,\n// 9 tabla de autobuses, 10 tabla de mensajes.\nconst P = env.get(\"TOPIC_PREFIX\");\nconst F = Number(env.get(\"FACTOR_TIEMPO\")) || 1;\nconst ID = env.get(\"PARADA_ID\");\nconst BUSES = String(env.get(\"BUSES\") || \"\").split(\",\").map(x => x.trim()).filter(Boolean);\nconst arranque = msg.origen === \"arranque\";\nconst out = new Array(10).fill(null);\n\nconst RESULTADOS = [\"Con el pulsador\", \"Al irse el autobús\"];\nconst NIVEL = { enviada: 1, asignada: 1, \"en parada\": 2 };\n\nlet st = flow.get(\"panel\");\nif (!st || arranque) {\n    st = { solicitud: null, aviso: \"ninguno\", vehiculo: \"calzada libre\",\n        proximos: null, buses: {}, eventos: [], resultados: {}, enviado: {} };\n    RESULTADOS.forEach(r => { st.resultados[r] = 0; });\n    BUSES.forEach(b => { st.buses[b] = { lcd: \"\", actuador: \"en reposo\" }; });\n}\nfunction evento(origen, texto) {\n    const d = new Date();\n    const hora = [d.getHours(), d.getMinutes(), d.getSeconds()].map(x => String(x).padStart(2, \"0\")).join(\":\");\n    st.eventos.unshift({ Hora: hora, Origen: origen, Mensaje: texto });\n    if (st.eventos.length > 12) st.eventos.pop();\n}\n\nlet nuevaLista = false;\nif (!arranque && typeof msg.topic === \"string\" && msg.topic.startsWith(P + \"/\")) {\n    const [clase, id, tema] = msg.topic.slice(P.length + 1).split(\"/\");\n    const p = msg.payload;\n    const obj = p && typeof p === \"object\" && !Buffer.isBuffer(p);\n\n    if (clase === \"parada\" && id === ID) {\n        if (tema === \"solicitud\" && obj) {\n            st.solicitud = { id: p.solicitud, linea: p.linea, estado: \"enviada\", pulsador: false };\n            evento(ID, `Solicitud de la línea ${p.linea} (${p.asistencia})`);\n        } else if (tema === \"deteccion\" && obj) {\n            st.vehiculo = p.estado === \"detenido\" ? `detenido a ${p.distancia_cm} cm` : \"calzada libre\";\n            evento(ID, p.estado === \"detenido\" ? `Vehículo detenido a ${p.distancia_cm} cm` : \"El vehículo se va\");\n        } else if (tema === \"proximos\") {\n            // Igual que la parada: una lista retenida de una ejecución anterior no vale\n            const reciente = obj && Array.isArray(p.buses) && (Date.now() / 1000 - p.ts) <= 60 / F + 3;\n            st.proximos = reciente ? p.buses : null;\n            nuevaLista = reciente;\n        } else if (tema === \"aviso\" && obj) {\n            const mia = st.solicitud && p.solicitud === st.solicitud.id;\n            if (p.tipo === \"asignado\") { if (mia) st.solicitud.estado = \"asignada\"; st.aviso = `Línea ${p.linea} avisada`; }\n            else if (p.tipo === \"llegado\") { if (mia) st.solicitud.estado = \"en parada\"; st.aviso = `El autobús de la línea ${p.linea} ha llegado`; }\n            else if (p.tipo === \"cerrada\") {\n                st.resultados[RESULTADOS[mia && st.solicitud.pulsador ? 0 : 1]] += 1;\n                if (mia) st.solicitud = null;\n                st.aviso = `Solicitud de la línea ${p.linea} cerrada`;\n            }\n            evento(\"Nube\", `Aviso ${p.tipo}: línea ${p.linea}`);\n        }\n    } else if (clase === \"autobus\") {\n        if (tema === \"asistencia\") {\n            if (obj && p.solicitud) {\n                if (!st.buses[id]) st.buses[id] = { lcd: \"\", actuador: \"en reposo\" };\n                st.buses[id].lcd = `${p.parada} ${p.linea} / ${p.asistencia === \"movilidad\" ? \"RAMPA\" : \"VISUAL\"}`;\n                evento(\"Nube\", `Asignación a ${id}: ${p.parada} ${p.linea}`);\n            } else if (st.buses[id]) {\n                st.buses[id].lcd = \"\";\n                st.buses[id].actuador = \"en reposo\";\n            }\n        } else if (tema === \"orden\" && obj && st.buses[id]) {\n            st.buses[id].actuador = p.tipo === \"guiar\" ? \"zumbador sonando\" : (p.tipo === \"rampa\" ? \"rampa desplegada\" : \"en reposo\");\n            evento(\"Nube\", `Orden ${p.tipo} a ${id}`);\n        } else if (tema === \"evento\" && obj && p.tipo === \"recogido\") {\n            if (st.buses[id]) st.buses[id].actuador = \"en reposo\";\n            if (st.solicitud && st.solicitud.id === p.solicitud) st.solicitud.pulsador = true;\n            evento(id, \"El conductor confirma la recogida\");\n        }\n    }\n}\n\n// ---------- reparto a los widgets (solo lo que cambia) ----------\nfunction texto(i, clave, valor) {\n    if (arranque || st.enviado[clave] !== valor) { st.enviado[clave] = valor; out[i] = { payload: valor }; }\n}\ntexto(0, \"solicitud\", st.solicitud ? `línea ${st.solicitud.linea}, ${st.solicitud.estado}` : \"ninguna\");\ntexto(1, \"aviso\", st.aviso);\ntexto(2, \"vehiculo\", st.vehiculo);\ntexto(3, \"proximos\", st.proximos === null ? \"sin datos\"\n    : (st.proximos.length ? st.proximos.map(b => `${b.linea} ${b.min} min`).join(\", \") : \"ninguno en 20 min\"));\n\nif (arranque) {\n    out[5] = { payload: [] };   // vacía las gráficas de líneas\n    out[6] = { payload: [] };\n} else if (nuevaLista && st.proximos) {\n    // Con cada renovación de la lista (30 s de escenario) se añade un punto a las gráficas\n    if (st.proximos.length) out[4] = { payload: st.proximos[0].min };\n    const lineas = [];\n    for (const b of st.proximos) {\n        if (!lineas.some(x => x.topic === b.linea)) lineas.push({ topic: b.linea, payload: b.min });\n    }\n    if (lineas.length) out[5] = lineas;\n    out[6] = { topic: \"Solicitud\", payload: st.solicitud ? (NIVEL[st.solicitud.estado] || 1) : 0 };\n}\nconst resumen = JSON.stringify(st.resultados);\nif (arranque || st.enviado.resultados !== resumen) {\n    st.enviado.resultados = resumen;\n    out[7] = { payload: RESULTADOS.map(r => ({ resultado: r, n: st.resultados[r] })) };\n}\nconst filas = Object.keys(st.buses).sort().map(b => ({\n    \"Autobús\": b, \"LCD\": st.buses[b].lcd || \"(en blanco)\", \"Zumbador y rampa\": st.buses[b].actuador }));\nconst tablaBuses = JSON.stringify(filas);\nif (arranque || st.enviado.buses !== tablaBuses) { st.enviado.buses = tablaBuses; out[8] = { payload: filas }; }\nconst tablaEventos = JSON.stringify(st.eventos);\nif (arranque || st.enviado.eventos !== tablaEventos) { st.enviado.eventos = tablaEventos; out[9] = { payload: st.eventos.slice() }; }\n\nflow.set(\"panel\", st);\nnode.status({ fill: \"blue\", shape: \"dot\", text: st.solicitud ? `solicitud ${st.solicitud.linea}: ${st.solicitud.estado}` : \"sin solicitud\" });\nreturn out;",
+        "outputs": 10,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 460,
+        "wires": [
+            [
+                "pan_ui_solicitud"
+            ],
+            [
+                "pan_ui_aviso"
+            ],
+            [
+                "pan_ui_vehiculo"
+            ],
+            [
+                "pan_ui_proximos"
+            ],
+            [
+                "pan_ui_galga"
+            ],
+            [
+                "pan_ui_minutos"
+            ],
+            [
+                "pan_ui_estado"
+            ],
+            [
+                "pan_ui_result"
+            ],
+            [
+                "pan_ui_buses"
+            ],
+            [
+                "pan_ui_eventos"
+            ]
+        ]
+    },
+    {
+        "id": "pan_c3",
+        "type": "comment",
+        "z": "tab_panel",
+        "name": "Grupo Parada P101",
+        "info": "",
+        "x": 640,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "pan_ui_solicitud",
+        "type": "ui-text",
+        "z": "tab_panel",
+        "group": "ui_g_parada",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "name": "Solicitud",
+        "label": "Solicitud",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#717171",
+        "wrapText": true,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 640,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "pan_ui_aviso",
+        "type": "ui-text",
+        "z": "tab_panel",
+        "group": "ui_g_parada",
+        "order": 4,
+        "width": 0,
+        "height": 0,
+        "name": "Último aviso",
+        "label": "Último aviso",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#717171",
+        "wrapText": true,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 650,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "pan_ui_vehiculo",
+        "type": "ui-text",
+        "z": "tab_panel",
+        "group": "ui_g_parada",
+        "order": 5,
+        "width": 0,
+        "height": 0,
+        "name": "Ultrasonidos",
+        "label": "Ultrasonidos",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#717171",
+        "wrapText": true,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 650,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "pan_ui_proximos",
+        "type": "ui-text",
+        "z": "tab_panel",
+        "group": "ui_g_parada",
+        "order": 6,
+        "width": 0,
+        "height": 0,
+        "name": "Próximos",
+        "label": "Próximos",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#717171",
+        "wrapText": true,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 640,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "pan_c4",
+        "type": "comment",
+        "z": "tab_panel",
+        "name": "Galga y gráficas",
+        "info": "",
+        "x": 640,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "pan_ui_galga",
+        "type": "ui-gauge",
+        "z": "tab_panel",
+        "name": "Próximo autobús",
+        "group": "ui_g_galga",
+        "order": 1,
+        "value": "payload",
+        "valueType": "msg",
+        "width": 3,
+        "height": 4,
+        "gtype": "gauge-half",
+        "gstyle": "needle",
+        "title": "",
+        "alwaysShowTitle": false,
+        "floatingTitlePosition": "top-left",
+        "units": "min",
+        "icon": "",
+        "prefix": "",
+        "suffix": "",
+        "segments": [
+            {
+                "from": 0,
+                "color": "#2ca02c"
+            },
+            {
+                "from": 1,
+                "color": "#e6a700"
+            },
+            {
+                "from": 10,
+                "color": "#9aa8b0"
+            }
+        ],
+        "min": 0,
+        "max": 20,
+        "sizeThickness": 16,
+        "sizeGap": 4,
+        "sizeKeyThickness": 8,
+        "styleRounded": true,
+        "styleGlow": false,
+        "className": "",
+        "x": 660,
+        "y": 520,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "pan_ui_minutos",
+        "type": "ui-chart",
+        "z": "tab_panel",
+        "group": "ui_g_min",
+        "name": "Minutos por línea",
+        "label": "",
+        "order": 1,
+        "chartType": "line",
+        "category": "topic",
+        "categoryType": "msg",
+        "xAxisLabel": "",
+        "xAxisProperty": "",
+        "xAxisPropertyType": "timestamp",
+        "xAxisType": "time",
+        "xAxisFormat": "",
+        "xAxisFormatType": "auto",
+        "xmin": "",
+        "xmax": "",
+        "yAxisLabel": "minutos",
+        "yAxisProperty": "payload",
+        "yAxisPropertyType": "msg",
+        "ymin": "0",
+        "ymax": "20",
+        "bins": 10,
+        "action": "append",
+        "stackSeries": false,
+        "pointShape": "circle",
+        "pointRadius": 2,
+        "showLegend": true,
+        "removeOlder": 10,
+        "removeOlderUnit": "60",
+        "removeOlderPoints": "",
+        "colors": [
+            "#0f7c86",
+            "#d9730d",
+            "#6f4bb2",
+            "#2ca02c",
+            "#d62728",
+            "#8c564b",
+            "#e377c2",
+            "#7f7f7f",
+            "#17becf"
+        ],
+        "textColor": [
+            "#666666"
+        ],
+        "textColorDefault": true,
+        "gridColor": [
+            "#e5e5e5"
+        ],
+        "gridColorDefault": true,
+        "width": 5,
+        "height": 5,
+        "className": "",
+        "interpolation": "linear",
+        "x": 660,
+        "y": 560,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "pan_ui_estado",
+        "type": "ui-chart",
+        "z": "tab_panel",
+        "group": "ui_g_estado",
+        "name": "Estado de la solicitud",
+        "label": "0 sin solicitud, 1 asignada, 2 en parada",
+        "order": 1,
+        "chartType": "line",
+        "category": "topic",
+        "categoryType": "msg",
+        "xAxisLabel": "",
+        "xAxisProperty": "",
+        "xAxisPropertyType": "timestamp",
+        "xAxisType": "time",
+        "xAxisFormat": "",
+        "xAxisFormatType": "auto",
+        "xmin": "",
+        "xmax": "",
+        "yAxisLabel": "",
+        "yAxisProperty": "payload",
+        "yAxisPropertyType": "msg",
+        "ymin": "0",
+        "ymax": "2",
+        "bins": 10,
+        "action": "append",
+        "stackSeries": false,
+        "pointShape": "circle",
+        "pointRadius": 2,
+        "showLegend": false,
+        "removeOlder": 10,
+        "removeOlderUnit": "60",
+        "removeOlderPoints": "",
+        "colors": [
+            "#0f7c86",
+            "#d9730d",
+            "#6f4bb2",
+            "#2ca02c",
+            "#d62728",
+            "#8c564b",
+            "#e377c2",
+            "#7f7f7f",
+            "#17becf"
+        ],
+        "textColor": [
+            "#666666"
+        ],
+        "textColorDefault": true,
+        "gridColor": [
+            "#e5e5e5"
+        ],
+        "gridColorDefault": true,
+        "width": 4,
+        "height": 5,
+        "className": "",
+        "interpolation": "step",
+        "x": 680,
+        "y": 600,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "pan_ui_result",
+        "type": "ui-chart",
+        "z": "tab_panel",
+        "group": "ui_g_result",
+        "name": "Solicitudes cerradas",
+        "label": "Cómo se cerraron las solicitudes",
+        "order": 1,
+        "chartType": "bar",
+        "category": "Solicitudes",
+        "categoryType": "str",
+        "xAxisLabel": "forma de cierre",
+        "xAxisProperty": "resultado",
+        "xAxisPropertyType": "property",
+        "xAxisType": "category",
+        "xAxisFormat": "",
+        "xAxisFormatType": "auto",
+        "xmin": "",
+        "xmax": "",
+        "yAxisLabel": "",
+        "yAxisProperty": "n",
+        "yAxisPropertyType": "property",
+        "ymin": "0",
+        "ymax": "",
+        "bins": 10,
+        "action": "replace",
+        "stackSeries": false,
+        "pointShape": "circle",
+        "pointRadius": 2,
+        "showLegend": false,
+        "removeOlder": 10,
+        "removeOlderUnit": "60",
+        "removeOlderPoints": "",
+        "colors": [
+            "#0f7c86",
+            "#d9730d",
+            "#6f4bb2",
+            "#2ca02c",
+            "#d62728",
+            "#8c564b",
+            "#e377c2",
+            "#7f7f7f",
+            "#17becf"
+        ],
+        "textColor": [
+            "#666666"
+        ],
+        "textColorDefault": true,
+        "gridColor": [
+            "#e5e5e5"
+        ],
+        "gridColorDefault": true,
+        "width": 6,
+        "height": 6,
+        "className": "",
+        "interpolation": "linear",
+        "x": 670,
+        "y": 640,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "pan_c5",
+        "type": "comment",
+        "z": "tab_panel",
+        "name": "Tablas",
+        "info": "",
+        "x": 610,
+        "y": 700,
+        "wires": []
+    },
+    {
+        "id": "pan_ui_buses",
+        "type": "ui-table",
+        "z": "tab_panel",
+        "group": "ui_g_buses",
+        "name": "Autobuses",
+        "label": "",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "maxrows": 0,
+        "passthru": false,
+        "autocols": true,
+        "showSearch": false,
+        "deselect": true,
+        "selectionType": "none",
+        "columns": [],
+        "mobileBreakpoint": "sm",
+        "mobileBreakpointType": "defaults",
+        "action": "replace",
+        "className": "",
+        "x": 640,
+        "y": 740,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "pan_ui_eventos",
+        "type": "ui-table",
+        "z": "tab_panel",
+        "group": "ui_g_eventos",
+        "name": "Últimos mensajes MQTT",
+        "label": "",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "maxrows": 0,
+        "passthru": false,
+        "autocols": true,
+        "showSearch": false,
+        "deselect": true,
+        "selectionType": "none",
+        "columns": [],
+        "mobileBreakpoint": "sm",
+        "mobileBreakpointType": "defaults",
+        "action": "replace",
+        "className": "",
+        "x": 680,
+        "y": 780,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "tab_esp32",
+        "type": "tab",
+        "label": "ESP32 (P2)",
+        "disabled": false,
+        "info": "Práctica 2: integración de los nodos ESP32-S3 reales (Parada P101 y Autobús AUT312).\nAl usar esta pestaña hay que DESACTIVAR las pestañas virtuales 'Parada P101' y 'Autobús AUT312'.",
+        "env": [
+            {
+                "name": "PARADA_ID",
+                "value": "P101",
+                "type": "str"
+            },
+            {
+                "name": "BUS_ID",
+                "value": "AUT312",
+                "type": "str"
+            }
+        ]
+    },
+    {
+        "id": "esp_broker",
+        "type": "mqtt-broker",
+        "z": "tab_esp32",
+        "name": "MQTT ESP32",
+        "broker": "${MQTT_BROKER}",
+        "port": "${MQTT_PORT}",
+        "clientid": "",
+        "autoConnect": false,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "esp_c1",
+        "type": "comment",
+        "z": "tab_esp32",
+        "name": "Ejercicio 3: datos que publican los ESP32 por MQTT (se ven en el Debug)",
+        "info": "",
+        "x": 330,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "esp_inj_arranque",
+        "type": "inject",
+        "z": "tab_esp32",
+        "name": "Arranque",
+        "props": [
+            {
+                "p": "origen",
+                "v": "arranque",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "1",
+        "topic": "",
+        "x": 130,
+        "y": 100,
+        "wires": [
+            [
+                "esp_fn_conectar"
+            ]
+        ]
+    },
+    {
+        "id": "esp_fn_conectar",
+        "type": "function",
+        "z": "tab_esp32",
+        "name": "Conectar y suscribir",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 320,
+        "y": 100,
+        "wires": [
+            [
+                "esp_mqtt_in"
+            ]
+        ],
+        "func": "// Conecta con el broker y se suscribe a lo que publican los dos ESP32.\nconst P = env.get(\"TOPIC_PREFIX\");\nconst PA = `${P}/parada/${env.get(\"PARADA_ID\")}/`;\nconst BU = `${P}/autobus/${env.get(\"BUS_ID\")}/`;\nconst temas = [\n    PA + \"telemetria\", PA + \"conexion\", PA + \"deteccion\", PA + \"solicitud\", PA + \"altavoz\",\n    BU + \"telemetria\", BU + \"conexion\", BU + \"evento\"\n];\nnode.send({ action: \"connect\", broker: {\n    broker: env.get(\"MQTT_BROKER\"), port: Number(env.get(\"MQTT_PORT\")),\n    clientid: \"\", cleansession: true, force: true\n} });\nnode.send({ action: \"subscribe\", topic: temas.map(t => ({ topic: t, qos: 1 })) });\nnode.status({ fill: \"blue\", shape: \"ring\", text: `${temas.length} suscripciones` });\nreturn null;"
+    },
+    {
+        "id": "esp_mqtt_in",
+        "type": "mqtt in",
+        "z": "tab_esp32",
+        "name": "Datos de los ESP32",
+        "topic": "",
+        "qos": "1",
+        "datatype": "auto-detect",
+        "broker": "esp_broker",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 1,
+        "x": 540,
+        "y": 100,
+        "wires": [
+            [
+                "esp_dbg_datos",
+                "esp_fn_estado"
+            ]
+        ]
+    },
+    {
+        "id": "esp_dbg_datos",
+        "type": "debug",
+        "z": "tab_esp32",
+        "name": "Datos de los ESP32",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "topic",
+        "statusType": "msg",
+        "x": 800,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "esp_fn_estado",
+        "type": "function",
+        "z": "tab_esp32",
+        "name": "Estado de los ESP32",
+        "outputs": 7,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 790,
+        "y": 200,
+        "outputLabels": [
+            "parada: conexión",
+            "parada: ultrasonidos",
+            "parada: usuario y solicitud",
+            "parada: altavoz",
+            "autobús: conexión",
+            "autobús: LCD",
+            "autobús: zumbador y rampa"
+        ],
+        "func": "// Reparte lo que publican los ESP32 a los widgets del dashboard.\n// Salidas: 1-4 parada, 5-7 autobús (ver etiquetas de las salidas).\nconst P = env.get(\"TOPIC_PREFIX\");\nconst partes = msg.topic.slice(P.length + 1).split(\"/\");   // [parada|autobus, id, tema]\nconst [clase, , tema] = partes;\nconst p = msg.payload;\nconst out = new Array(7).fill(null);\nconst conexion = v => v === \"online\" ? \"conectado\" : \"DESCONECTADO\";\n\nif (clase === \"parada\") {\n    if (tema === \"conexion\") out[0] = { payload: conexion(String(p)) };\n    else if (tema === \"telemetria\" && p && typeof p === \"object\") {\n        out[1] = { payload: `${p.distancia_cm} cm${p.vehiculo ? \" (vehículo detenido)\" : \"\"}` };\n        out[2] = { payload: `${p.usuario ? \"usuario \" + p.usuario : \"sin usuario\"}${p.solicitud ? \" | solicitud \" + p.solicitud : \"\"}` };\n    } else if (tema === \"altavoz\" && p && p.texto) out[3] = { payload: p.texto };\n} else if (clase === \"autobus\") {\n    if (tema === \"conexion\") out[4] = { payload: conexion(String(p)) };\n    else if (tema === \"telemetria\" && p && typeof p === \"object\") {\n        const l = Array.isArray(p.lcd) ? p.lcd : [\"\", \"\"];\n        out[5] = { payload: `[${(l[0] || \"\").padEnd(8)}][${(l[1] || \"\").padEnd(8)}]` };\n        out[6] = { payload: `zumbador ${p.zumbador ? \"SONANDO\" : \"apagado\"} | rampa ${p.rampa_grados} grados` };\n    }\n}\nreturn out;\n",
+        "wires": [
+            [
+                "esp_ui_par_conexion"
+            ],
+            [
+                "esp_ui_par_us"
+            ],
+            [
+                "esp_ui_par_usuario"
+            ],
+            [
+                "esp_ui_par_altavoz"
+            ],
+            [
+                "esp_ui_bus_conexion"
+            ],
+            [
+                "esp_ui_bus_lcd"
+            ],
+            [
+                "esp_ui_bus_act"
+            ]
+        ]
+    },
+    {
+        "id": "esp_ui_g_parada",
+        "type": "ui-group",
+        "name": "Nodo Parada P101 (ESP32-S3)",
+        "page": "ui_pagina",
+        "width": "6",
+        "height": "1",
+        "order": 10,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "esp_ui_g_bus",
+        "type": "ui-group",
+        "name": "Nodo Autobús AUT312 (ESP32-S3)",
+        "page": "ui_pagina",
+        "width": "6",
+        "height": "1",
+        "order": 11,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "esp_ui_g_control",
+        "type": "ui-group",
+        "name": "Control de actuadores (ESP32-S3)",
+        "page": "ui_pagina",
+        "width": "6",
+        "height": "1",
+        "order": 12,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "esp_ui_par_conexion",
+        "type": "ui-text",
+        "z": "tab_esp32",
+        "group": "esp_ui_g_parada",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "name": "Conexión",
+        "label": "Conexión",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#717171",
+        "wrapText": true,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 1060,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "esp_ui_par_us",
+        "type": "ui-text",
+        "z": "tab_esp32",
+        "group": "esp_ui_g_parada",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "name": "Ultrasonidos",
+        "label": "Ultrasonidos",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#717171",
+        "wrapText": true,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 1070,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "esp_ui_par_usuario",
+        "type": "ui-text",
+        "z": "tab_esp32",
+        "group": "esp_ui_g_parada",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "name": "Usuario",
+        "label": "Usuario",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#717171",
+        "wrapText": true,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 1060,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "esp_ui_par_altavoz",
+        "type": "ui-text",
+        "z": "tab_esp32",
+        "group": "esp_ui_g_parada",
+        "order": 4,
+        "width": 0,
+        "height": 0,
+        "name": "Altavoz",
+        "label": "Altavoz",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#717171",
+        "wrapText": true,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 1060,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "esp_ui_bus_conexion",
+        "type": "ui-text",
+        "z": "tab_esp32",
+        "group": "esp_ui_g_bus",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "name": "Conexión",
+        "label": "Conexión",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#717171",
+        "wrapText": true,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 1060,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "esp_ui_bus_lcd",
+        "type": "ui-text",
+        "z": "tab_esp32",
+        "group": "esp_ui_g_bus",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "name": "LCD 8x2",
+        "label": "LCD 8x2",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#717171",
+        "wrapText": true,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 1060,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "esp_ui_bus_act",
+        "type": "ui-text",
+        "z": "tab_esp32",
+        "group": "esp_ui_g_bus",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "name": "Actuadores",
+        "label": "Actuadores",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#717171",
+        "wrapText": true,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 1060,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "esp_mqtt_out",
+        "type": "mqtt out",
+        "z": "tab_esp32",
+        "name": "MQTT hacia los ESP32",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "esp_broker",
+        "x": 700,
+        "y": 740,
+        "wires": []
+    },
+    {
+        "id": "esp_c3",
+        "type": "comment",
+        "z": "tab_esp32",
+        "name": "Open Weather Map: el aviso de suelo mojado se manda a la parada (retenido en .../tiempo)",
+        "info": "",
+        "x": 360,
+        "y": 1200,
+        "wires": []
+    },
+    {
+        "id": "esp_inj_tiempo",
+        "type": "inject",
+        "z": "tab_esp32",
+        "name": "Cada 30 s",
+        "props": [],
+        "repeat": "30",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "3",
+        "topic": "",
+        "x": 140,
+        "y": 1260,
+        "wires": [
+            [
+                "esp_fn_url"
+            ]
+        ]
+    },
+    {
+        "id": "esp_fn_url",
+        "type": "function",
+        "z": "tab_esp32",
+        "name": "URL de Open Weather Map",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 1260,
+        "wires": [
+            [
+                "esp_http_owm"
+            ]
+        ],
+        "func": "// Tiempo actual de Vigo. La API key es la variable de entorno OPENWEATHER_API_KEY.\nconst key = env.get(\"OPENWEATHER_API_KEY\");\nif (!key || key === \"PON_AQUI_TU_API_KEY\") {\n    node.status({ fill: \"red\", shape: \"ring\", text: \"falta OPENWEATHER_API_KEY (Settings, Environment)\" });\n    return null;\n}\nmsg.url = `https://api.openweathermap.org/data/2.5/weather?q=Vigo,ES&units=metric&lang=es&appid=${encodeURIComponent(key)}`;\nnode.status({});\nreturn msg;"
+    },
+    {
+        "id": "esp_http_owm",
+        "type": "http request",
+        "z": "tab_esp32",
+        "name": "Open Weather Map: Vigo",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 570,
+        "y": 1260,
+        "wires": [
+            [
+                "esp_fn_tiempo"
+            ]
+        ]
+    },
+    {
+        "id": "esp_fn_tiempo",
+        "type": "function",
+        "z": "tab_esp32",
+        "name": "Tiempo a aviso de suelo mojado",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 810,
+        "y": 1260,
+        "wires": [
+            [
+                "esp_mqtt_out"
+            ]
+        ],
+        "func": "// Misma regla que en la P1. Solo se publica si cambia; la parada lo dice una vez por usuario.\nif (msg.statusCode !== 200 || !msg.payload || typeof msg.payload !== \"object\") {\n    node.status({ fill: \"red\", shape: \"ring\", text: `error ${msg.statusCode}` });\n    return null;\n}\nconst datos = msg.payload;\nconst codigo = (datos.weather && datos.weather[0] && datos.weather[0].id) || 0;\nconst grupo = Math.floor(codigo / 100);\nconst lluviaMm = (datos.rain && (datos.rain[\"1h\"] || datos.rain[\"3h\"])) || 0;\nconst temp = datos.main && datos.main.temp;\nconst detalle = (datos.weather && datos.weather[0] && datos.weather[0].description) || codigo;\n\nlet aviso = null;\nif (grupo === 6) aviso = \"Atención: está nevando, el suelo puede estar resbaladizo.\";\nelse if (grupo === 2) aviso = \"Atención: hay tormenta, el suelo está mojado. Tenga cuidado al subir al autobús.\";\nelse if (grupo === 5 || grupo === 3) aviso = \"Atención: está lloviendo, el suelo puede estar resbaladizo. Tenga cuidado al subir al autobús.\";\nelse if (lluviaMm > 0) aviso = \"Atención: ha llovido recientemente, el suelo puede estar mojado.\";\nif (aviso && typeof temp === \"number\" && temp <= 0) aviso += \" Puede haber hielo.\";\n\nnode.status(aviso ? { fill: \"blue\", shape: \"dot\", text: `suelo mojado (${detalle})` }\n                  : { fill: \"green\", shape: \"dot\", text: `suelo seco (${detalle})` });\nif (context.get(\"ultimo\") === aviso) return null;\ncontext.set(\"ultimo\", aviso);\nconst P = env.get(\"TOPIC_PREFIX\");\nreturn { topic: `${P}/parada/${env.get(\"PARADA_ID\")}/tiempo`, payload: { aviso: aviso }, qos: 1, retain: true };"
+    },
+    {
+        "id": "esp_c4",
+        "type": "comment",
+        "z": "tab_esp32",
+        "name": "Ejercicio 4: control de los actuadores desde el dashboard (topic .../control)",
+        "info": "",
+        "x": 340,
+        "y": 860,
+        "wires": []
+    },
+    {
+        "id": "esp_ui_sw_zumbador",
+        "type": "ui-switch",
+        "z": "tab_esp32",
+        "name": "Zumbador del autobús",
+        "label": "Zumbador del autobús",
+        "group": "esp_ui_g_control",
+        "order": 1,
+        "width": "6",
+        "height": "1",
+        "passthru": false,
+        "decouple": false,
+        "topic": "zumbador",
+        "topicType": "str",
+        "style": "",
+        "className": "",
+        "layout": "row-spread",
+        "clickableArea": "line",
+        "onvalue": "true",
+        "onvalueType": "bool",
+        "onicon": "",
+        "oncolor": "",
+        "offvalue": "false",
+        "offvalueType": "bool",
+        "officon": "",
+        "offcolor": "",
+        "x": 170,
+        "y": 920,
+        "wires": [
+            [
+                "esp_fn_control"
+            ]
+        ]
+    },
+    {
+        "id": "esp_ui_sw_rampa",
+        "type": "ui-switch",
+        "z": "tab_esp32",
+        "name": "Rampa del autobús bajada",
+        "label": "Rampa del autobús bajada",
+        "group": "esp_ui_g_control",
+        "order": 2,
+        "width": "6",
+        "height": "1",
+        "passthru": false,
+        "decouple": false,
+        "topic": "rampa",
+        "topicType": "str",
+        "style": "",
+        "className": "",
+        "layout": "row-spread",
+        "clickableArea": "line",
+        "onvalue": "true",
+        "onvalueType": "bool",
+        "onicon": "",
+        "oncolor": "",
+        "offvalue": "false",
+        "offvalueType": "bool",
+        "officon": "",
+        "offcolor": "",
+        "x": 170,
+        "y": 980,
+        "wires": [
+            [
+                "esp_fn_control"
+            ]
+        ]
+    },
+    {
+        "id": "esp_ui_decir",
+        "type": "ui-text-input",
+        "z": "tab_esp32",
+        "group": "esp_ui_g_control",
+        "name": "Altavoz de la parada",
+        "label": "Altavoz de la parada (escribe y pulsa Enter)",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "topic": "decir",
+        "topicType": "str",
+        "mode": "text",
+        "tooltip": "",
+        "delay": 300,
+        "passthru": false,
+        "sendOnDelay": false,
+        "sendOnBlur": false,
+        "sendOnEnter": true,
+        "className": "",
+        "clearable": false,
+        "sendOnClear": false,
+        "icon": "",
+        "iconPosition": "left",
+        "iconInnerPosition": "inside",
+        "x": 190,
+        "y": 1060,
+        "wires": [
+            [
+                "esp_fn_control"
+            ]
+        ]
+    },
+    {
+        "id": "esp_fn_control",
+        "type": "function",
+        "z": "tab_esp32",
+        "name": "Control de actuadores",
+        "func": "// Ejercicio 4: el dashboard controla los actuadores de las placas.\n// msg.topic dice qué actuador y msg.payload el valor.\nconst P = env.get(\"TOPIC_PREFIX\");\nif (msg.topic === \"decir\") {\n    const texto = String(msg.payload || \"\").trim();\n    if (!texto) return null;\n    return { topic: `${P}/parada/${env.get(\"PARADA_ID\")}/control`,\n             payload: { accion: \"decir\", texto } };\n}\nnode.status({ text: `${msg.topic}: ${msg.payload ? \"sí\" : \"no\"}` });\nreturn { topic: `${P}/autobus/${env.get(\"BUS_ID\")}/control`,\n         payload: { accion: msg.topic, valor: msg.payload === true } };\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 450,
+        "y": 960,
+        "wires": [
+            [
+                "esp_mqtt_out",
+                "esp_dbg_control"
+            ]
+        ]
+    },
+    {
+        "id": "esp_dbg_control",
+        "type": "debug",
+        "z": "tab_esp32",
+        "name": "Órdenes del dashboard",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 700,
+        "y": 1000,
+        "wires": []
+    }
+]

@@ -1,0 +1,664 @@
+[
+  {
+    "id": "tab_esp32",
+    "type": "tab",
+    "label": "ESP32 (P2)",
+    "disabled": false,
+    "info": "Práctica 2: integración de los nodos ESP32-S3 reales (Parada P101 y Autobús AUT312).\nAl usar esta pestaña hay que DESACTIVAR las pestañas virtuales 'Parada P101' y 'Autobús AUT312'.",
+    "env": [
+      {
+        "name": "PARADA_ID",
+        "value": "P101",
+        "type": "str"
+      },
+      {
+        "name": "BUS_ID",
+        "value": "AUT312",
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "id": "esp_broker",
+    "type": "mqtt-broker",
+    "z": "tab_esp32",
+    "name": "MQTT ESP32",
+    "broker": "${MQTT_BROKER}",
+    "port": "${MQTT_PORT}",
+    "clientid": "",
+    "autoConnect": false,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "autoUnsubscribe": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthRetain": "false",
+    "birthPayload": "",
+    "birthMsg": {},
+    "closeTopic": "",
+    "closeQos": "0",
+    "closeRetain": "false",
+    "closePayload": "",
+    "closeMsg": {},
+    "willTopic": "",
+    "willQos": "0",
+    "willRetain": "false",
+    "willPayload": "",
+    "willMsg": {},
+    "userProps": "",
+    "sessionExpiry": ""
+  },
+  {
+    "id": "esp_c1",
+    "type": "comment",
+    "z": "tab_esp32",
+    "name": "Ejercicio 3: datos que publican los ESP32 por MQTT (se ven en el Debug)",
+    "info": "",
+    "x": 330,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "esp_inj_arranque",
+    "type": "inject",
+    "z": "tab_esp32",
+    "name": "Arranque",
+    "props": [
+      {
+        "p": "origen",
+        "v": "arranque",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "1",
+    "topic": "",
+    "x": 130,
+    "y": 100,
+    "wires": [
+      [
+        "esp_fn_conectar"
+      ]
+    ]
+  },
+  {
+    "id": "esp_fn_conectar",
+    "type": "function",
+    "z": "tab_esp32",
+    "name": "Conectar y suscribir",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 320,
+    "y": 100,
+    "wires": [
+      [
+        "esp_mqtt_in"
+      ]
+    ],
+    "func": "// Conecta con el broker y se suscribe a lo que publican los dos ESP32.\nconst P = env.get(\"TOPIC_PREFIX\");\nconst PA = `${P}/parada/${env.get(\"PARADA_ID\")}/`;\nconst BU = `${P}/autobus/${env.get(\"BUS_ID\")}/`;\nconst temas = [\n    PA + \"telemetria\", PA + \"conexion\", PA + \"deteccion\", PA + \"solicitud\", PA + \"altavoz\",\n    BU + \"telemetria\", BU + \"conexion\", BU + \"evento\"\n];\nnode.send({ action: \"connect\", broker: {\n    broker: env.get(\"MQTT_BROKER\"), port: Number(env.get(\"MQTT_PORT\")),\n    clientid: \"\", cleansession: true, force: true\n} });\nnode.send({ action: \"subscribe\", topic: temas.map(t => ({ topic: t, qos: 1 })) });\nnode.status({ fill: \"blue\", shape: \"ring\", text: `${temas.length} suscripciones` });\nreturn null;"
+  },
+  {
+    "id": "esp_mqtt_in",
+    "type": "mqtt in",
+    "z": "tab_esp32",
+    "name": "Datos de los ESP32",
+    "topic": "",
+    "qos": "1",
+    "datatype": "auto-detect",
+    "broker": "esp_broker",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 1,
+    "x": 540,
+    "y": 100,
+    "wires": [
+      [
+        "esp_dbg_datos",
+        "esp_fn_estado"
+      ]
+    ]
+  },
+  {
+    "id": "esp_dbg_datos",
+    "type": "debug",
+    "z": "tab_esp32",
+    "name": "Datos de los ESP32",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": true,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "topic",
+    "statusType": "msg",
+    "x": 800,
+    "y": 60,
+    "wires": []
+  },
+  {
+    "id": "esp_fn_estado",
+    "type": "function",
+    "z": "tab_esp32",
+    "name": "Estado de los ESP32",
+    "outputs": 7,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 790,
+    "y": 200,
+    "outputLabels": [
+      "parada: conexión",
+      "parada: ultrasonidos",
+      "parada: usuario y solicitud",
+      "parada: altavoz",
+      "autobús: conexión",
+      "autobús: LCD",
+      "autobús: zumbador y rampa"
+    ],
+    "func": "// Reparte lo que publican los ESP32 a los widgets del dashboard.\n// Salidas: 1-4 parada, 5-7 autobús (ver etiquetas de las salidas).\nconst P = env.get(\"TOPIC_PREFIX\");\nconst partes = msg.topic.slice(P.length + 1).split(\"/\");   // [parada|autobus, id, tema]\nconst [clase, , tema] = partes;\nconst p = msg.payload;\nconst out = new Array(7).fill(null);\nconst conexion = v => v === \"online\" ? \"conectado\" : \"DESCONECTADO\";\n\nif (clase === \"parada\") {\n    if (tema === \"conexion\") out[0] = { payload: conexion(String(p)) };\n    else if (tema === \"telemetria\" && p && typeof p === \"object\") {\n        out[1] = { payload: `${p.distancia_cm} cm${p.vehiculo ? \" (vehículo detenido)\" : \"\"}` };\n        out[2] = { payload: `${p.usuario ? \"usuario \" + p.usuario : \"sin usuario\"}${p.solicitud ? \" | solicitud \" + p.solicitud : \"\"}` };\n    } else if (tema === \"altavoz\" && p && p.texto) out[3] = { payload: p.texto };\n} else if (clase === \"autobus\") {\n    if (tema === \"conexion\") out[4] = { payload: conexion(String(p)) };\n    else if (tema === \"telemetria\" && p && typeof p === \"object\") {\n        const l = Array.isArray(p.lcd) ? p.lcd : [\"\", \"\"];\n        out[5] = { payload: `[${(l[0] || \"\").padEnd(8)}][${(l[1] || \"\").padEnd(8)}]` };\n        out[6] = { payload: `zumbador ${p.zumbador ? \"SONANDO\" : \"apagado\"} | rampa ${p.rampa_grados} grados` };\n    }\n}\nreturn out;\n",
+    "wires": [
+      [
+        "esp_ui_par_conexion"
+      ],
+      [
+        "esp_ui_par_us"
+      ],
+      [
+        "esp_ui_par_usuario"
+      ],
+      [
+        "esp_ui_par_altavoz"
+      ],
+      [
+        "esp_ui_bus_conexion"
+      ],
+      [
+        "esp_ui_bus_lcd"
+      ],
+      [
+        "esp_ui_bus_act"
+      ]
+    ]
+  },
+  {
+    "id": "esp_ui_g_parada",
+    "type": "ui-group",
+    "name": "Nodo Parada P101 (ESP32-S3)",
+    "page": "ui_pagina",
+    "width": "6",
+    "height": "1",
+    "order": 10,
+    "showTitle": true,
+    "className": "",
+    "visible": "true",
+    "disabled": "false",
+    "groupType": "default"
+  },
+  {
+    "id": "esp_ui_g_bus",
+    "type": "ui-group",
+    "name": "Nodo Autobús AUT312 (ESP32-S3)",
+    "page": "ui_pagina",
+    "width": "6",
+    "height": "1",
+    "order": 11,
+    "showTitle": true,
+    "className": "",
+    "visible": "true",
+    "disabled": "false",
+    "groupType": "default"
+  },
+  {
+    "id": "esp_ui_g_control",
+    "type": "ui-group",
+    "name": "Control de actuadores (ESP32-S3)",
+    "page": "ui_pagina",
+    "width": "6",
+    "height": "1",
+    "order": 12,
+    "showTitle": true,
+    "className": "",
+    "visible": "true",
+    "disabled": "false",
+    "groupType": "default"
+  },
+  {
+    "id": "esp_ui_par_conexion",
+    "type": "ui-text",
+    "z": "tab_esp32",
+    "group": "esp_ui_g_parada",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "name": "Conexión",
+    "label": "Conexión",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#717171",
+    "wrapText": true,
+    "className": "",
+    "value": "payload",
+    "valueType": "msg",
+    "x": 1060,
+    "y": 140,
+    "wires": []
+  },
+  {
+    "id": "esp_ui_par_us",
+    "type": "ui-text",
+    "z": "tab_esp32",
+    "group": "esp_ui_g_parada",
+    "order": 2,
+    "width": 0,
+    "height": 0,
+    "name": "Ultrasonidos",
+    "label": "Ultrasonidos",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#717171",
+    "wrapText": true,
+    "className": "",
+    "value": "payload",
+    "valueType": "msg",
+    "x": 1070,
+    "y": 180,
+    "wires": []
+  },
+  {
+    "id": "esp_ui_par_usuario",
+    "type": "ui-text",
+    "z": "tab_esp32",
+    "group": "esp_ui_g_parada",
+    "order": 3,
+    "width": 0,
+    "height": 0,
+    "name": "Usuario",
+    "label": "Usuario",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#717171",
+    "wrapText": true,
+    "className": "",
+    "value": "payload",
+    "valueType": "msg",
+    "x": 1060,
+    "y": 220,
+    "wires": []
+  },
+  {
+    "id": "esp_ui_par_altavoz",
+    "type": "ui-text",
+    "z": "tab_esp32",
+    "group": "esp_ui_g_parada",
+    "order": 4,
+    "width": 0,
+    "height": 0,
+    "name": "Altavoz",
+    "label": "Altavoz",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#717171",
+    "wrapText": true,
+    "className": "",
+    "value": "payload",
+    "valueType": "msg",
+    "x": 1060,
+    "y": 260,
+    "wires": []
+  },
+  {
+    "id": "esp_ui_bus_conexion",
+    "type": "ui-text",
+    "z": "tab_esp32",
+    "group": "esp_ui_g_bus",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "name": "Conexión",
+    "label": "Conexión",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#717171",
+    "wrapText": true,
+    "className": "",
+    "value": "payload",
+    "valueType": "msg",
+    "x": 1060,
+    "y": 300,
+    "wires": []
+  },
+  {
+    "id": "esp_ui_bus_lcd",
+    "type": "ui-text",
+    "z": "tab_esp32",
+    "group": "esp_ui_g_bus",
+    "order": 2,
+    "width": 0,
+    "height": 0,
+    "name": "LCD 8x2",
+    "label": "LCD 8x2",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#717171",
+    "wrapText": true,
+    "className": "",
+    "value": "payload",
+    "valueType": "msg",
+    "x": 1060,
+    "y": 340,
+    "wires": []
+  },
+  {
+    "id": "esp_ui_bus_act",
+    "type": "ui-text",
+    "z": "tab_esp32",
+    "group": "esp_ui_g_bus",
+    "order": 3,
+    "width": 0,
+    "height": 0,
+    "name": "Actuadores",
+    "label": "Actuadores",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#717171",
+    "wrapText": true,
+    "className": "",
+    "value": "payload",
+    "valueType": "msg",
+    "x": 1060,
+    "y": 420,
+    "wires": []
+  },
+  {
+    "id": "esp_mqtt_out",
+    "type": "mqtt out",
+    "z": "tab_esp32",
+    "name": "MQTT hacia los ESP32",
+    "topic": "",
+    "qos": "",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "esp_broker",
+    "x": 700,
+    "y": 740,
+    "wires": []
+  },
+  {
+    "id": "esp_c3",
+    "type": "comment",
+    "z": "tab_esp32",
+    "name": "Open Weather Map: el aviso de suelo mojado se manda a la parada (retenido en .../tiempo)",
+    "info": "",
+    "x": 360,
+    "y": 1200,
+    "wires": []
+  },
+  {
+    "id": "esp_inj_tiempo",
+    "type": "inject",
+    "z": "tab_esp32",
+    "name": "Cada 30 s",
+    "props": [],
+    "repeat": "30",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "3",
+    "topic": "",
+    "x": 140,
+    "y": 1260,
+    "wires": [
+      [
+        "esp_fn_url"
+      ]
+    ]
+  },
+  {
+    "id": "esp_fn_url",
+    "type": "function",
+    "z": "tab_esp32",
+    "name": "URL de Open Weather Map",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 340,
+    "y": 1260,
+    "wires": [
+      [
+        "esp_http_owm"
+      ]
+    ],
+    "func": "// Tiempo actual de Vigo. La API key es la variable de entorno OPENWEATHER_API_KEY.\nconst key = env.get(\"OPENWEATHER_API_KEY\");\nif (!key || key === \"PON_AQUI_TU_API_KEY\") {\n    node.status({ fill: \"red\", shape: \"ring\", text: \"falta OPENWEATHER_API_KEY (Settings, Environment)\" });\n    return null;\n}\nmsg.url = `https://api.openweathermap.org/data/2.5/weather?q=Vigo,ES&units=metric&lang=es&appid=${encodeURIComponent(key)}`;\nnode.status({});\nreturn msg;"
+  },
+  {
+    "id": "esp_http_owm",
+    "type": "http request",
+    "z": "tab_esp32",
+    "name": "Open Weather Map: Vigo",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 570,
+    "y": 1260,
+    "wires": [
+      [
+        "esp_fn_tiempo"
+      ]
+    ]
+  },
+  {
+    "id": "esp_fn_tiempo",
+    "type": "function",
+    "z": "tab_esp32",
+    "name": "Tiempo a aviso de suelo mojado",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 810,
+    "y": 1260,
+    "wires": [
+      [
+        "esp_mqtt_out"
+      ]
+    ],
+    "func": "// Misma regla que en la P1. Solo se publica si cambia; la parada lo dice una vez por usuario.\nif (msg.statusCode !== 200 || !msg.payload || typeof msg.payload !== \"object\") {\n    node.status({ fill: \"red\", shape: \"ring\", text: `error ${msg.statusCode}` });\n    return null;\n}\nconst datos = msg.payload;\nconst codigo = (datos.weather && datos.weather[0] && datos.weather[0].id) || 0;\nconst grupo = Math.floor(codigo / 100);\nconst lluviaMm = (datos.rain && (datos.rain[\"1h\"] || datos.rain[\"3h\"])) || 0;\nconst temp = datos.main && datos.main.temp;\nconst detalle = (datos.weather && datos.weather[0] && datos.weather[0].description) || codigo;\n\nlet aviso = null;\nif (grupo === 6) aviso = \"Atención: está nevando, el suelo puede estar resbaladizo.\";\nelse if (grupo === 2) aviso = \"Atención: hay tormenta, el suelo está mojado. Tenga cuidado al subir al autobús.\";\nelse if (grupo === 5 || grupo === 3) aviso = \"Atención: está lloviendo, el suelo puede estar resbaladizo. Tenga cuidado al subir al autobús.\";\nelse if (lluviaMm > 0) aviso = \"Atención: ha llovido recientemente, el suelo puede estar mojado.\";\nif (aviso && typeof temp === \"number\" && temp <= 0) aviso += \" Puede haber hielo.\";\n\nnode.status(aviso ? { fill: \"blue\", shape: \"dot\", text: `suelo mojado (${detalle})` }\n                  : { fill: \"green\", shape: \"dot\", text: `suelo seco (${detalle})` });\nif (context.get(\"ultimo\") === aviso) return null;\ncontext.set(\"ultimo\", aviso);\nconst P = env.get(\"TOPIC_PREFIX\");\nreturn { topic: `${P}/parada/${env.get(\"PARADA_ID\")}/tiempo`, payload: { aviso: aviso }, qos: 1, retain: true };"
+  },
+  {
+    "id": "esp_c4",
+    "type": "comment",
+    "z": "tab_esp32",
+    "name": "Ejercicio 4: control de los actuadores desde el dashboard (topic .../control)",
+    "info": "",
+    "x": 340,
+    "y": 860,
+    "wires": []
+  },
+  {
+    "id": "esp_ui_sw_zumbador",
+    "type": "ui-switch",
+    "z": "tab_esp32",
+    "name": "Zumbador del autobús",
+    "label": "Zumbador del autobús",
+    "group": "esp_ui_g_control",
+    "order": 1,
+    "width": "6",
+    "height": "1",
+    "passthru": false,
+    "decouple": false,
+    "topic": "zumbador",
+    "topicType": "str",
+    "style": "",
+    "className": "",
+    "layout": "row-spread",
+    "clickableArea": "line",
+    "onvalue": "true",
+    "onvalueType": "bool",
+    "onicon": "",
+    "oncolor": "",
+    "offvalue": "false",
+    "offvalueType": "bool",
+    "officon": "",
+    "offcolor": "",
+    "x": 170,
+    "y": 920,
+    "wires": [
+      [
+        "esp_fn_control"
+      ]
+    ]
+  },
+  {
+    "id": "esp_ui_sw_rampa",
+    "type": "ui-switch",
+    "z": "tab_esp32",
+    "name": "Rampa del autobús bajada",
+    "label": "Rampa del autobús bajada",
+    "group": "esp_ui_g_control",
+    "order": 2,
+    "width": "6",
+    "height": "1",
+    "passthru": false,
+    "decouple": false,
+    "topic": "rampa",
+    "topicType": "str",
+    "style": "",
+    "className": "",
+    "layout": "row-spread",
+    "clickableArea": "line",
+    "onvalue": "true",
+    "onvalueType": "bool",
+    "onicon": "",
+    "oncolor": "",
+    "offvalue": "false",
+    "offvalueType": "bool",
+    "officon": "",
+    "offcolor": "",
+    "x": 170,
+    "y": 980,
+    "wires": [
+      [
+        "esp_fn_control"
+      ]
+    ]
+  },
+  {
+    "id": "esp_ui_decir",
+    "type": "ui-text-input",
+    "z": "tab_esp32",
+    "group": "esp_ui_g_control",
+    "name": "Altavoz de la parada",
+    "label": "Altavoz de la parada (escribe y pulsa Enter)",
+    "order": 3,
+    "width": 0,
+    "height": 0,
+    "topic": "decir",
+    "topicType": "str",
+    "mode": "text",
+    "tooltip": "",
+    "delay": 300,
+    "passthru": false,
+    "sendOnDelay": false,
+    "sendOnBlur": false,
+    "sendOnEnter": true,
+    "className": "",
+    "clearable": false,
+    "sendOnClear": false,
+    "icon": "",
+    "iconPosition": "left",
+    "iconInnerPosition": "inside",
+    "x": 190,
+    "y": 1060,
+    "wires": [
+      [
+        "esp_fn_control"
+      ]
+    ]
+  },
+  {
+    "id": "esp_fn_control",
+    "type": "function",
+    "z": "tab_esp32",
+    "name": "Control de actuadores",
+    "func": "// Ejercicio 4: el dashboard controla los actuadores de las placas.\n// msg.topic dice qué actuador y msg.payload el valor.\nconst P = env.get(\"TOPIC_PREFIX\");\nif (msg.topic === \"decir\") {\n    const texto = String(msg.payload || \"\").trim();\n    if (!texto) return null;\n    return { topic: `${P}/parada/${env.get(\"PARADA_ID\")}/control`,\n             payload: { accion: \"decir\", texto } };\n}\nnode.status({ text: `${msg.topic}: ${msg.payload ? \"sí\" : \"no\"}` });\nreturn { topic: `${P}/autobus/${env.get(\"BUS_ID\")}/control`,\n         payload: { accion: msg.topic, valor: msg.payload === true } };\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 450,
+    "y": 960,
+    "wires": [
+      [
+        "esp_mqtt_out",
+        "esp_dbg_control"
+      ]
+    ]
+  },
+  {
+    "id": "esp_dbg_control",
+    "type": "debug",
+    "z": "tab_esp32",
+    "name": "Órdenes del dashboard",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "true",
+    "targetType": "full",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 700,
+    "y": 1000,
+    "wires": []
+  }
+]
